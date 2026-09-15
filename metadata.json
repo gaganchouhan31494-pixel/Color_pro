@@ -1,0 +1,6 @@
+{
+  "name": "Color Prediction Game",
+  "description": "An interactive color and number prediction game simulator with live countdown timer, trend chart, parity analysis, and demo wallet.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
