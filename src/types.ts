@@ -5,6 +5,17 @@ export type BetTargetType = 'color' | 'number' | 'size';
 export type ColorType = 'green' | 'red' | 'violet';
 export type SizeType = 'big' | 'small';
 
+export type AppPage =
+  | 'game'
+  | 'deposit'
+  | 'withdraw'
+  | 'refer'
+  | 'proof'
+  | 'support'
+  | 'about'
+  | 'profile'
+  | 'auth';
+
 export interface RoundResult {
   id: string; // e.g. "20260915001"
   period: string;
@@ -38,6 +49,86 @@ export interface UserWallet {
   totalWon: number;
   totalLost: number;
   totalBetsPlaced: number;
+  totalDeposited: number;
+  totalWithdrawn: number;
+}
+
+export interface BankAccount {
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  ifscCode: string;
+  upiId: string;
+}
+
+export interface UserAccount {
+  id: string;
+  phone: string;
+  username: string;
+  avatar: string;
+  vipLevel: number;
+  inviteCode: string;
+  invitedBy?: string;
+  isLoggedIn: boolean;
+  createdAt: number;
+  bankDetails?: BankAccount;
+}
+
+export interface DepositRecord {
+  id: string;
+  amount: number;
+  method: 'upi' | 'paytm' | 'phonepe' | 'gpay' | 'bank' | 'usdt' | string;
+  status: 'completed' | 'processing' | 'failed';
+  utr: string;
+  bonus: number;
+  timestamp: number;
+}
+
+export interface WithdrawRecord {
+  id: string;
+  amount: number;
+  payoutMethod: 'bank' | 'upi' | string;
+  targetAddress: string;
+  status: 'completed' | 'processing' | 'pending';
+  utr: string;
+  fee: number;
+  timestamp: number;
+}
+
+export interface ProofItem {
+  id: string;
+  userMasked: string;
+  avatar: string;
+  amount: number;
+  method: string;
+  utr: string;
+  timeAgo: string;
+  bankName: string;
+  city: string;
+}
+
+export interface ReferralFriend {
+  id: string;
+  phone: string;
+  level: 1 | 2 | 3;
+  date: string;
+  totalBet: number;
+  commission: number;
+}
+
+export interface ReferralData {
+  inviteCode: string;
+  referralLink: string;
+  totalInvited: number;
+  level1Count: number;
+  level2Count: number;
+  level3Count: number;
+  todayCommission: number;
+  totalCommission: number;
+  claimedCommission: number;
+  unclaimedCommission: number;
+  friends: ReferralFriend[];
 }
 
 export type Language = 'en' | 'hi';
+

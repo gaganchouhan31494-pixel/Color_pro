@@ -1,15 +1,29 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
+  AppPage,
   BetTargetType,
   ColorType,
+  DepositRecord,
   GameMode,
   Language,
+  ReferralData,
   RoundResult,
   SizeType,
+  UserAccount,
   UserBet,
   UserWallet,
+  WithdrawRecord,
 } from './types';
 import { Header } from './components/Header';
+import { Navigation } from './components/Navigation';
+import { AuthModal } from './components/AuthModal';
+import { DepositPage } from './components/DepositPage';
+import { WithdrawPage } from './components/WithdrawPage';
+import { ReferPage } from './components/ReferPage';
+import { ProofPage } from './components/ProofPage';
+import { SupportPage } from './components/SupportPage';
+import { AboutPage } from './components/AboutPage';
+import { ProfilePage } from './components/ProfilePage';
 import { ModeSelector } from './components/ModeSelector';
 import { PeriodCountdownCard } from './components/PeriodCountdownCard';
 import { BettingBoard } from './components/BettingBoard';
@@ -21,6 +35,8 @@ import { RulesModal } from './components/RulesModal';
 import { Lucky3DSphere } from './components/Lucky3DSphere';
 import { ColorReductionGame } from './components/ColorReductionGame';
 import { VIPTicker } from './components/VIPTicker';
+import { Hero3DBanner } from './components/Hero3DBanner';
+import { MobileDrawer } from './components/MobileDrawer';
 import {
   calculateBetResult,
   formatCurrency,
@@ -31,17 +47,30 @@ import {
 import { sound } from './utils/sound';
 import { Sparkles, Dices, Sliders } from 'lucide-react';
 import { translations } from './utils/translations';
+import {
+  INITIAL_USER,
+  INITIAL_DEPOSITS,
+  INITIAL_WITHDRAWALS,
+  INITIAL_REFERRAL_DATA,
+} from './utils/dummyData';
 
 const STORAGE_KEYS = {
-  WALLET: 'color_pred_wallet_v1',
-  HISTORY: 'color_pred_history_v1',
-  BETS: 'color_pred_bets_v1',
-  LANG: 'color_pred_lang_v1',
-  SOUND: 'color_pred_sound_v1',
+  WALLET: 'color_pred_wallet_v2',
+  HISTORY: 'color_pred_history_v2',
+  BETS: 'color_pred_bets_v2',
+  LANG: 'color_pred_lang_v2',
+  SOUND: 'color_pred_sound_v2',
+  USER: 'color_pred_user_v2',
+  DEPOSITS: 'color_pred_deposits_v2',
+  WITHDRAWALS: 'color_pred_withdrawals_v2',
+  REFERRAL: 'color_pred_referral_v2',
 };
 
 export default function App() {
-  // 1. Language state (defaults to Hindi as requested by the user prompt, with seamless English toggle)
+  // 1. Current Active Page
+  const [activePage, setActivePage] = useState<AppPage>('game');
+
+  // 2. Language state (defaults to Hindi as requested by the user prompt, with seamless English toggle)
   const [language, setLanguage] = useState<Language>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LANG);
@@ -53,7 +82,20 @@ export default function App() {
 
   const t = translations[language];
 
-  // 2. Sound state
+  // 3. User Authentication State
+  const [user, setUser] = useState<UserAccount>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.USER);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_USER;
+  });
+
+  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
+
+  // 4. Sound state
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SOUND);
@@ -63,7 +105,7 @@ export default function App() {
     }
   });
 
-  // 3. User Wallet
+  // 5. User Wallet
   const [wallet, setWallet] = useState<UserWallet>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.WALLET);
@@ -76,17 +118,51 @@ export default function App() {
       totalWon: 0,
       totalLost: 0,
       totalBetsPlaced: 0,
+      totalDeposited: 15000,
+      totalWithdrawn: 14500,
     };
   });
 
-  // 4. Game Mode (30s fast mode by default)
+  // 6. Deposit and Withdrawal History Records
+  const [deposits, setDeposits] = useState<DepositRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.DEPOSITS);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_DEPOSITS;
+  });
+
+  const [withdrawals, setWithdrawals] = useState<WithdrawRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.WITHDRAWALS);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_WITHDRAWALS;
+  });
+
+  // 7. Referral Commission Data
+  const [referralData, setReferralData] = useState<ReferralData>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.REFERRAL);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return INITIAL_REFERRAL_DATA;
+  });
+
+  // 8. Game Mode (30s fast mode by default)
   const [gameMode, setGameMode] = useState<GameMode>('30s');
   // Top-level game selector: 'wingo' (Color Prediction) or 'reduction' (Color Reduction Game)
   const [activeGameTab, setActiveGameTab] = useState<'wingo' | 'reduction'>('wingo');
   // 3D Lucky Sphere toggle
   const [show3DStage, setShow3DStage] = useState<boolean>(true);
 
-  // 5. History records
+  // 9. History records
   const [history, setHistory] = useState<Record<GameMode, RoundResult[]>>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.HISTORY);
@@ -101,7 +177,7 @@ export default function App() {
     };
   });
 
-  // 6. User Bets
+  // 10. User Bets
   const [userBets, setUserBets] = useState<UserBet[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.BETS);
@@ -112,7 +188,7 @@ export default function App() {
     return [];
   });
 
-  // 7. Modals state
+  // 11. Modals state
   const [betModalData, setBetModalData] = useState<{
     isOpen: boolean;
     targetType: BetTargetType;
@@ -136,8 +212,9 @@ export default function App() {
 
   const [rechargeModalOpen, setRechargeModalOpen] = useState<boolean>(false);
   const [rulesModalOpen, setRulesModalOpen] = useState<boolean>(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState<boolean>(false);
 
-  // 8. Clock & Period Timer Management
+  // 12. Clock & Period Timer Management
   const [remainingSeconds, setRemainingSeconds] = useState<number>(30);
   const [currentPeriod, setCurrentPeriod] = useState<string>(() => generatePeriodId('30s'));
 
@@ -150,6 +227,42 @@ export default function App() {
       // ignore
     }
   }, [soundEnabled]);
+
+  // Persist user
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    } catch {
+      // ignore
+    }
+  }, [user]);
+
+  // Persist deposits
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.DEPOSITS, JSON.stringify(deposits));
+    } catch {
+      // ignore
+    }
+  }, [deposits]);
+
+  // Persist withdrawals
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.WITHDRAWALS, JSON.stringify(withdrawals));
+    } catch {
+      // ignore
+    }
+  }, [withdrawals]);
+
+  // Persist referral
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.REFERRAL, JSON.stringify(referralData));
+    } catch {
+      // ignore
+    }
+  }, [referralData]);
 
   // Persist wallet
   useEffect(() => {
@@ -191,16 +304,13 @@ export default function App() {
 
   // Settle round handler
   const settleRound = useCallback((periodToSettle: string, mode: GameMode) => {
-    // 1. Generate new round result
     const newResult = generateRandomResult(periodToSettle, mode);
 
-    // 2. Add to history
     setHistory((prev) => ({
       ...prev,
       [mode]: [newResult, ...prev[mode].slice(0, 49)],
     }));
 
-    // 3. Settle any pending bets for this period and mode
     let roundWinnings = 0;
     let roundLosses = 0;
     const settledPeriodBets: UserBet[] = [];
@@ -227,7 +337,6 @@ export default function App() {
       })
     );
 
-    // 4. Update wallet balance if there are winnings
     if (roundWinnings > 0 || roundLosses > 0) {
       setWallet((w) => ({
         ...w,
@@ -237,7 +346,6 @@ export default function App() {
       }));
     }
 
-    // 5. Open results popup
     setResultModalData({
       isOpen: true,
       result: newResult,
@@ -264,12 +372,10 @@ export default function App() {
       const period = generatePeriodId(gameMode);
       setCurrentPeriod(period);
 
-      // Play tick audio when countdown is 5, 4, 3, 2, 1
       if (left <= 5 && left > 0 && currentMs < 200) {
         sound.playTick(left <= 3);
       }
 
-      // When reaching zero, check if we need to settle
       if (left === intervalSec || left === 0) {
         const prevPeriod = generatePeriodId(gameMode, -1);
         if (lastSettledPeriodRef.current !== prevPeriod) {
@@ -289,7 +395,6 @@ export default function App() {
     const totalBet = amount * multiplier;
     if (wallet.balance < totalBet) return;
 
-    // Deduct contract money immediately from wallet
     setWallet((w) => ({
       ...w,
       balance: w.balance - totalBet,
@@ -314,12 +419,73 @@ export default function App() {
     setUserBets((prev) => [newBet, ...prev]);
   };
 
-  // Fund helpers
-  const handleAddFunds = (amount: number) => {
+  // Fund handlers for Deposit Page
+  const handleDepositSuccess = (amount: number, method: 'upi' | 'paytm' | 'phonepe' | 'gpay' | 'bank' | 'usdt') => {
+    // 10% instant deposit bonus
+    const bonus = Math.round(amount * 0.1);
+    const totalAdded = amount + bonus;
+
+    setWallet((w) => ({
+      ...w,
+      balance: w.balance + totalAdded,
+      totalDeposited: (w.totalDeposited || 0) + totalAdded,
+    }));
+
+    const newRecord: DepositRecord = {
+      id: 'dep-' + Date.now(),
+      amount,
+      bonus,
+      method,
+      status: 'completed',
+      utr: '948' + Math.floor(100000000 + Math.random() * 900000000),
+      timestamp: Date.now(),
+    };
+
+    setDeposits((prev) => [newRecord, ...prev]);
+  };
+
+  // Withdrawal handler for Withdraw Page
+  const handleWithdrawalRequest = (amount: number, method: 'bank' | 'upi', targetAddress: string): boolean => {
+    if (wallet.balance < amount) return false;
+    setWallet((w) => ({
+      ...w,
+      balance: w.balance - amount,
+      totalWithdrawn: (w.totalWithdrawn || 0) + amount,
+    }));
+
+    const newRecord: WithdrawRecord = {
+      id: 'wd-' + Date.now(),
+      amount,
+      fee: 0,
+      payoutMethod: method,
+      targetAddress,
+      status: 'completed',
+      utr: '948' + Math.floor(100000000 + Math.random() * 900000000),
+      timestamp: Date.now(),
+    };
+
+    setWithdrawals((prev) => [newRecord, ...prev]);
+    return true;
+  };
+
+  // Referral Claim Commission handler
+  const handleClaimCommission = (amount: number) => {
     setWallet((w) => ({
       ...w,
       balance: w.balance + amount,
+      totalWon: w.totalWon + amount,
     }));
+
+    setReferralData((prev) => ({
+      ...prev,
+      unclaimedCommission: 0,
+      totalCommission: prev.totalCommission + amount,
+    }));
+  };
+
+  // Direct demo recharge modal helper
+  const handleAddFundsDirect = (amount: number) => {
+    handleDepositSuccess(amount, 'upi');
   };
 
   const handleResetWallet = () => {
@@ -328,7 +494,37 @@ export default function App() {
       totalWon: 0,
       totalLost: 0,
       totalBetsPlaced: 0,
+      totalDeposited: 15000,
+      totalWithdrawn: 14500,
     });
+  };
+
+  // Auth handler
+  const handleAuthSuccess = (phone: string, username: string) => {
+    setUser({
+      id: 'UID' + Math.floor(100000 + Math.random() * 900000),
+      username,
+      phone,
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      isLoggedIn: true,
+      vipLevel: 3,
+      registrationDate: new Date().toLocaleDateString('en-IN'),
+      bankDetails: {
+        bankName: 'State Bank of India',
+        accountNumber: '••••6721',
+        ifsc: 'SBIN0001245',
+        accountHolder: username,
+        upiId: `${username.toLowerCase()}@okhdfc`,
+      },
+    });
+  };
+
+  const handleLogout = () => {
+    setUser((prev) => ({
+      ...prev,
+      isLoggedIn: false,
+    }));
+    sound.playClick();
   };
 
   const currentModeHistory = history[gameMode] || [];
@@ -336,196 +532,254 @@ export default function App() {
   const isLocked = remainingSeconds <= 5;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-12">
-      {/* Top Header */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-24 sm:pb-12">
+      {/* Top Sticky Header */}
       <Header
         wallet={wallet}
+        user={user}
         language={language}
         soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled((v) => !v)}
         onToggleLanguage={() => setLanguage((l) => (l === 'en' ? 'hi' : 'en'))}
-        onOpenRecharge={() => setRechargeModalOpen(true)}
+        onOpenRecharge={() => setActivePage('deposit')}
         onOpenRules={() => setRulesModalOpen(true)}
-        onResetBalance={handleResetWallet}
+        onOpenAuth={() => setAuthModalOpen(true)}
+        onSelectPage={(page) => setActivePage(page)}
+        onOpenMobileDrawer={() => setMobileDrawerOpen(true)}
       />
 
       {/* Main Container */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-4 py-3 sm:py-5 space-y-4 sm:space-y-5">
-        {/* VIP Live Winners Ticker */}
-        <VIPTicker language={language} />
+        {/* Navigation Bar for Desktop & Mobile */}
+        <Navigation
+          activePage={activePage}
+          onSelectPage={(page) => {
+            sound.playClick();
+            setActivePage(page);
+          }}
+          language={language}
+          isLoggedIn={user.isLoggedIn}
+        />
 
-        {/* Top Game Switcher Tabs: Win Go vs Color Reduction */}
-        <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-md">
-          <button
-            id="tab-select-wingo"
-            onClick={() => setActiveGameTab('wingo')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              activeGameTab === 'wingo'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-            }`}
-          >
-            <Dices className="w-4 h-4 text-emerald-300" />
-            <span>{t.modeWinGo}</span>
-          </button>
+        {/* PAGE 1: Core Color Prediction & Reduction Game */}
+        {activePage === 'game' && (
+          <div className="space-y-4 sm:space-y-5 animate-fadeIn">
+            {/* VIP Live Winners Ticker */}
+            <VIPTicker language={language} />
 
-          <button
-            id="tab-select-reduction"
-            onClick={() => setActiveGameTab('reduction')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              activeGameTab === 'reduction'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-            }`}
-          >
-            <Sliders className="w-4 h-4 text-indigo-300" />
-            <span>{t.modeColorReduction}</span>
-            <span className="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded font-mono font-bold uppercase hidden sm:inline-block">
-              NEW
-            </span>
-          </button>
-        </div>
+            {/* 3D Luxury Casino Hero Showcase Banner */}
+            <Hero3DBanner
+              language={language}
+              onOpenDeposit={() => setActivePage('deposit')}
+              onOpenRules={() => setRulesModalOpen(true)}
+              onSelectGameTab={(tab) => setActiveGameTab(tab)}
+            />
 
-        {activeGameTab === 'wingo' ? (
-          <>
-            {/* Game Mode Selector (30s / 1m / 3m) */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex-1">
-                <ModeSelector
-                  currentMode={gameMode}
-                  onSelectMode={(mode) => setGameMode(mode)}
-                  language={language}
-                />
-              </div>
+            {/* Top Game Switcher Tabs: Win Go vs Color Reduction */}
+            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-md">
               <button
-                id="btn-toggle-3d-sphere"
-                onClick={() => setShow3DStage((v) => !v)}
-                className={`self-end sm:self-auto px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
-                  show3DStage
-                    ? 'bg-indigo-950/80 border-indigo-500/40 text-indigo-300 hover:bg-indigo-900'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                id="tab-select-wingo"
+                onClick={() => setActiveGameTab('wingo')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  activeGameTab === 'wingo'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>{t.toggle3DView}</span>
+                <Dices className="w-4 h-4 text-emerald-300" />
+                <span>{t.modeWinGo}</span>
+              </button>
+
+              <button
+                id="tab-select-reduction"
+                onClick={() => setActiveGameTab('reduction')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  activeGameTab === 'reduction'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                <Sliders className="w-4 h-4 text-indigo-300" />
+                <span>{t.modeColorReduction}</span>
+                <span className="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded font-mono font-bold uppercase hidden sm:inline-block">
+                  NEW
+                </span>
               </button>
             </div>
 
-            {/* Responsive Bento Section: 3D Lucky Sphere & Countdown Card */}
-            <div className={`grid gap-4 ${show3DStage ? 'grid-cols-1 lg:grid-cols-12' : 'grid-cols-1'}`}>
-              {/* Period & Countdown Card */}
-              <div className={show3DStage ? 'lg:col-span-6' : 'col-span-1'}>
-                <PeriodCountdownCard
-                  period={currentPeriod}
+            {activeGameTab === 'wingo' ? (
+              <>
+                {/* Game Mode Selector (30s / 1m / 3m) */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex-1">
+                    <ModeSelector
+                      currentMode={gameMode}
+                      onSelectMode={(mode) => setGameMode(mode)}
+                      language={language}
+                    />
+                  </div>
+                  <button
+                    id="btn-toggle-3d-sphere"
+                    onClick={() => setShow3DStage((v) => !v)}
+                    className={`self-end sm:self-auto px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
+                      show3DStage
+                        ? 'bg-indigo-950/80 border-indigo-500/40 text-indigo-300 hover:bg-indigo-900'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{t.toggle3DView}</span>
+                  </button>
+                </div>
+
+                {/* Responsive Bento Section: 3D Lucky Sphere & Countdown Card */}
+                <div className={`grid gap-4 ${show3DStage ? 'grid-cols-1 lg:grid-cols-12' : 'grid-cols-1'}`}>
+                  {/* Period & Countdown Card */}
+                  <div className={show3DStage ? 'lg:col-span-6' : 'col-span-1'}>
+                    <PeriodCountdownCard
+                      period={currentPeriod}
+                      remainingSeconds={remainingSeconds}
+                      totalRoundSeconds={totalRoundSeconds}
+                      recentResults={currentModeHistory}
+                      language={language}
+                    />
+                  </div>
+
+                  {/* 3D Interactive Lucky Sphere */}
+                  {show3DStage && (
+                    <div className="lg:col-span-6">
+                      <Lucky3DSphere
+                        remainingSeconds={remainingSeconds}
+                        isLocked={isLocked}
+                        lastResult={currentModeHistory[0]}
+                        language={language}
+                        onSelectColor={(color) => {
+                          setBetModalData({
+                            isOpen: true,
+                            targetType: 'color',
+                            selectedColor: color,
+                          });
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Core Betting Board (Green/Violet/Red, 0-9, Big/Small) */}
+                <BettingBoard
+                  isLocked={isLocked}
                   remainingSeconds={remainingSeconds}
-                  totalRoundSeconds={totalRoundSeconds}
-                  recentResults={currentModeHistory}
+                  language={language}
+                  onOpenBetModal={(targetType, payload) => {
+                    setBetModalData({
+                      isOpen: true,
+                      targetType,
+                      ...payload,
+                    });
+                  }}
+                />
+
+                {/* History, Trend Chart, User Bets & Rules */}
+                <HistoryAndTrends
+                  history={currentModeHistory}
+                  userBets={currentModeBets}
+                  gameMode={gameMode}
+                  language={language}
+                />
+              </>
+            ) : (
+              /* Color Reduction Game Section */
+              <div className="space-y-5">
+                <ColorReductionGame
+                  wallet={wallet}
+                  language={language}
+                  onUpdateWallet={(newWallet) => setWallet(newWallet)}
+                />
+
+                <HistoryAndTrends
+                  history={currentModeHistory}
+                  userBets={currentModeBets}
+                  gameMode={gameMode}
                   language={language}
                 />
               </div>
-
-              {/* 3D Interactive Lucky Sphere */}
-              {show3DStage && (
-                <div className="lg:col-span-6">
-                  <Lucky3DSphere
-                    remainingSeconds={remainingSeconds}
-                    isLocked={isLocked}
-                    lastResult={currentModeHistory[0]}
-                    language={language}
-                    onSelectColor={(color) => {
-                      setBetModalData({
-                        isOpen: true,
-                        targetType: 'color',
-                        selectedColor: color,
-                      });
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Core Betting Board (Green/Violet/Red, 0-9, Big/Small) */}
-            <BettingBoard
-              isLocked={isLocked}
-              remainingSeconds={remainingSeconds}
-              language={language}
-              onOpenBetModal={(targetType, payload) => {
-                setBetModalData({
-                  isOpen: true,
-                  targetType,
-                  ...payload,
-                });
-              }}
-            />
-
-            {/* History, Trend Chart, User Bets & Rules */}
-            <HistoryAndTrends
-              history={currentModeHistory}
-              userBets={currentModeBets}
-              gameMode={gameMode}
-              language={language}
-            />
-          </>
-        ) : (
-          /* Color Reduction Game Section */
-          <div className="space-y-5">
-            <ColorReductionGame
-              wallet={wallet}
-              language={language}
-              onUpdateWallet={(newWallet) => setWallet(newWallet)}
-            />
-
-            {/* History and Trends also visible */}
-            <HistoryAndTrends
-              history={currentModeHistory}
-              userBets={currentModeBets}
-              gameMode={gameMode}
-              language={language}
-            />
+            )}
           </div>
+        )}
+
+        {/* PAGE 2: Deposit Page */}
+        {activePage === 'deposit' && (
+          <DepositPage
+            wallet={wallet}
+            language={language}
+            deposits={deposits}
+            onAddFunds={handleDepositSuccess}
+          />
+        )}
+
+        {/* PAGE 3: Withdraw Page */}
+        {activePage === 'withdraw' && (
+          <WithdrawPage
+            wallet={wallet}
+            withdrawals={withdrawals}
+            bankDetails={user.bankDetails}
+            onUpdateBankDetails={(details) => {
+              setUser((prev) => ({ ...prev, bankDetails: details }));
+            }}
+            onRequestWithdrawal={handleWithdrawalRequest}
+            language={language}
+          />
+        )}
+
+        {/* PAGE 4: Refer & Earn Page */}
+        {activePage === 'refer' && (
+          <ReferPage
+            referralData={referralData}
+            onClaimCommission={handleClaimCommission}
+            language={language}
+          />
+        )}
+
+        {/* PAGE 5: Verified Payment Proofs */}
+        {activePage === 'proof' && (
+          <ProofPage language={language} />
+        )}
+
+        {/* PAGE 6: 24/7 Connect / Support */}
+        {activePage === 'support' && (
+          <SupportPage language={language} />
+        )}
+
+        {/* PAGE 7: About Platform & Provably Fair */}
+        {activePage === 'about' && (
+          <AboutPage language={language} />
+        )}
+
+        {/* PAGE 8: Profile & VIP Dashboard */}
+        {activePage === 'profile' && (
+          <ProfilePage
+            user={user}
+            wallet={wallet}
+            language={language}
+            onSelectPage={(page) => setActivePage(page)}
+            onLogout={handleLogout}
+            onToggleSound={() => setSoundEnabled((v) => !v)}
+            soundEnabled={soundEnabled}
+            onToggleLanguage={() => setLanguage((l) => (l === 'en' ? 'hi' : 'en'))}
+          />
         )}
       </main>
 
-      {/* Mobile Sticky Quick Action Bar */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-4 py-2 flex items-center justify-between shadow-2xl">
-        <div className="flex items-center gap-2">
-          <div className="text-left">
-            <div className="text-[10px] text-slate-400 font-medium leading-tight">
-              {activeGameTab === 'wingo' ? `${gameMode.toUpperCase()} Round` : 'Reduction'}
-            </div>
-            <div className="text-xs font-mono font-bold text-amber-300">
-              {formatCurrency(wallet.balance)}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="text-right">
-            <div className="text-[10px] text-slate-400 font-medium leading-tight">
-              {t.countDown}
-            </div>
-            <div className={`text-xs font-mono font-bold ${isLocked ? 'text-rose-400 animate-pulse' : 'text-emerald-400'}`}>
-              {remainingSeconds}s
-            </div>
-          </div>
-          <button
-            id="btn-mobile-quick-recharge"
-            onClick={() => setRechargeModalOpen(true)}
-            className="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold shadow active:scale-95"
-          >
-            + ₹ Fund
-          </button>
-        </div>
-      </div>
-
       {/* Footer Info */}
-      <footer className="max-w-4xl mx-auto px-4 text-center text-xs text-slate-500 mt-4">
-        <p className="flex items-center justify-center gap-1.5 flex-wrap">
-          <span>{language === 'hi' ? 'कलर प्रेडिक्शन गेम सिमुलेटर' : 'Color Prediction Game Simulator'}</span>
+      <footer className="max-w-4xl mx-auto px-4 text-center text-xs text-slate-500 mt-6 hidden sm:block">
+        <p className="flex items-center justify-center gap-2 flex-wrap">
+          <span className="font-semibold text-slate-400">
+            {language === 'hi' ? 'कलर प्रेडिक्शन गेम प्लेटफॉर्म' : 'VIP Color Prediction Game Platform'}
+          </span>
           <span>•</span>
-          <span className="text-emerald-500 font-medium">100% Free Demo Mode</span>
+          <span className="text-emerald-400 font-medium">100% Provably Fair SHA-256</span>
           <span>•</span>
-          <span>{language === 'hi' ? 'सुरक्षित और निष्पक्ष गेमिंग' : 'Fair & Transparent Odds'}</span>
+          <span>{language === 'hi' ? '24/7 ऑटोमेटेड पेआउट और सपोर्ट' : '24/7 Instant Payouts & Support'}</span>
         </p>
       </footer>
 
@@ -557,7 +811,7 @@ export default function App() {
         onClose={() => setRechargeModalOpen(false)}
         wallet={wallet}
         language={language}
-        onAddFunds={handleAddFunds}
+        onAddFunds={handleAddFundsDirect}
         onResetWallet={handleResetWallet}
       />
 
@@ -567,6 +821,34 @@ export default function App() {
         onClose={() => setRulesModalOpen(false)}
         language={language}
       />
+
+      {/* Login & Register Authentication Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        language={language}
+        onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* Mobile Drawer (Smooth Slide-out Menu) */}
+      <MobileDrawer
+        isOpen={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        activePage={activePage}
+        onSelectPage={(page) => {
+          sound.playClick();
+          setActivePage(page);
+        }}
+        user={user}
+        wallet={wallet}
+        language={language}
+        soundEnabled={soundEnabled}
+        onToggleSound={() => setSoundEnabled((v) => !v)}
+        onToggleLanguage={() => setLanguage((l) => (l === 'en' ? 'hi' : 'en'))}
+        onOpenRules={() => setRulesModalOpen(true)}
+        onResetWallet={handleResetWallet}
+      />
     </div>
   );
 }
+
