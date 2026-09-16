@@ -132,3 +132,19 @@ export interface ReferralData {
 
 export type Language = 'en' | 'hi';
 
+export type ColorThemeId = 'monochrome' | 'emerald' | 'cyber' | 'royalGold' | 'rubyMonaco';
+
+export interface ThemeConfig {
+  id: ColorThemeId;
+  name: string;
+  nameHi: string;
+  description: string;
+  descriptionHi: string;
+  previewColors: string[];
+  bgClass: string;
+  headerBorder: string;
+  ambientGlow1: string;
+  ambientGlow2: string;
+  activeTabClass: string;
+}
+

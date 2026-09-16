@@ -16,7 +16,7 @@ import {
   HelpCircle,
   RotateCcw,
   Sparkles,
-  ExternalLink,
+  Palette,
 } from 'lucide-react';
 import { AppPage, Language, UserAccount, UserWallet } from '../types';
 import { translations } from '../utils/translations';
@@ -35,6 +35,7 @@ interface MobileDrawerProps {
   onToggleLanguage: () => void;
   onOpenRules: () => void;
   onResetWallet: () => void;
+  onOpenThemeModal?: () => void;
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({
@@ -50,6 +51,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   onToggleLanguage,
   onOpenRules,
   onResetWallet,
+  onOpenThemeModal,
 }) => {
   if (!isOpen) return null;
 
@@ -64,7 +66,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
     { id: 'game', label: t.navGame, icon: Gamepad2 },
     { id: 'deposit', label: t.navDeposit, icon: Wallet, badge: '+10% Bonus' },
     { id: 'withdraw', label: t.navWithdraw, icon: ArrowDownCircle, badge: 'Instant' },
-    { id: 'refer', label: t.navRefer, icon: Users2, badge: 'High Commission' },
+    { id: 'refer', label: t.navRefer, icon: Users2, badge: 'Hot' },
     { id: 'proof', label: t.navProof, icon: CheckCircle2, badge: 'Live' },
     { id: 'support', label: t.navSupport, icon: Headphones, badge: '24/7' },
     { id: 'about', label: t.navAbout, icon: Info },
@@ -74,51 +76,51 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   return (
     <div
       id="mobile-nav-drawer-overlay"
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex justify-end animate-fadeIn"
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex justify-end animate-fadeIn"
       onClick={onClose}
     >
       <div
         id="mobile-nav-drawer-content"
-        className="w-full max-w-xs h-full bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col overflow-y-auto"
+        className="w-full max-w-xs h-full bg-zinc-950 border-l border-white/15 shadow-2xl flex flex-col overflow-y-auto animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-zinc-900/50">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-purple-500 flex items-center justify-center font-black text-white text-sm shadow">
-              CP
+            <div className="w-8 h-8 rounded-xl bg-white text-zinc-950 flex items-center justify-center font-black text-xs shadow-md font-mono">
+              PRO
             </div>
             <div>
               <div className="text-sm font-black text-white">{t.appTitle}</div>
-              <div className="text-[10px] text-emerald-400 font-bold">VIP Gaming App</div>
+              <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">VIP Gaming Face</div>
             </div>
           </div>
           <button
             id="btn-close-mobile-drawer"
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+            className="p-1.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white active:scale-90 transition-all"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* User Status Card */}
-        <div className="p-4 bg-slate-950/60 border-b border-slate-800">
+        <div className="p-4 bg-zinc-900/80 border-b border-white/10">
           <div className="flex items-center gap-3">
             <img
               src={user.avatar}
               alt="Avatar"
-              className="w-11 h-11 rounded-full border-2 border-amber-400 object-cover shadow"
+              className="w-11 h-11 rounded-2xl border-2 border-white/30 object-cover shadow"
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-white truncate">{user.username}</span>
-                <span className="text-[9px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/40 px-1 rounded">
+                <span className="text-xs font-black text-white truncate">{user.username}</span>
+                <span className="text-[9px] font-black bg-white/15 text-white border border-white/20 px-1 rounded">
                   VIP {user.vipLevel}
                 </span>
               </div>
-              <div className="text-[11px] text-slate-400 font-mono">UID: {user.id}</div>
-              <div className="text-xs font-mono font-bold text-amber-400 mt-0.5">
+              <div className="text-[11px] text-zinc-400 font-mono">UID: {user.id}</div>
+              <div className="text-sm font-mono font-black text-amber-400 mt-0.5">
                 {formatCurrency(wallet.balance)}
               </div>
             </div>
@@ -127,7 +129,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
 
         {/* Navigation Links */}
         <div className="flex-1 py-3 px-3 space-y-1">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 py-1">
+          <div className="text-[10px] font-black uppercase tracking-wider text-zinc-500 px-3 py-1">
             {language === 'hi' ? 'नेविगेशन मेनू' : 'Navigation Menu'}
           </div>
           {navLinks.map((link) => {
@@ -138,18 +140,18 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
                 key={link.id}
                 id={`drawer-link-${link.id}`}
                 onClick={() => handleItemClick(link.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all active:scale-95 ${
                   isActive
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-white text-zinc-950 shadow-md border border-white'
+                    : 'text-zinc-300 hover:bg-zinc-900 hover:text-white border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className="w-4 h-4 text-slate-400" />
+                  <Icon className="w-4 h-4" />
                   <span>{link.label}</span>
                 </div>
                 {link.badge && (
-                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30 font-mono">
                     {link.badge}
                   </span>
                 )}
@@ -159,15 +161,37 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
         </div>
 
         {/* Quick Settings & Tools Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-2">
+        <div className="p-4 border-t border-white/10 bg-zinc-900/60 space-y-2">
+          {/* Quick theme selector button */}
+          {onOpenThemeModal && (
+            <button
+              id="drawer-btn-theme"
+              onClick={() => {
+                onOpenThemeModal();
+                onClose();
+              }}
+              className="w-full flex items-center justify-between py-2.5 px-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-bold text-white transition-all shadow-sm active:scale-95"
+            >
+              <div className="flex items-center gap-2">
+                <Palette className="w-4 h-4 text-white" />
+                <span className="text-white font-bold">
+                  {language === 'hi' ? 'कलर थीम बदलें' : 'Change Color Theme'}
+                </span>
+              </div>
+              <span className="text-[10px] bg-white/10 text-zinc-200 px-2 py-0.5 rounded-full font-mono font-bold">
+                Themes
+              </span>
+            </button>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             {/* Language switch */}
             <button
               id="drawer-btn-language"
               onClick={onToggleLanguage}
-              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200"
+              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-xs font-bold text-white active:scale-95 transition-all"
             >
-              <Languages className="w-4 h-4 text-indigo-400" />
+              <Languages className="w-4 h-4 text-zinc-400" />
               <span>{language === 'en' ? 'हिन्दी' : 'English'}</span>
             </button>
 
@@ -175,7 +199,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
             <button
               id="drawer-btn-sound"
               onClick={onToggleSound}
-              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200"
+              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-xs font-bold text-white active:scale-95 transition-all"
             >
               {soundEnabled ? (
                 <>
@@ -199,7 +223,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
                 onOpenRules();
                 onClose();
               }}
-              className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-slate-800/80 border border-slate-700 text-[11px] font-semibold text-slate-300"
+              className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-2xl bg-zinc-900 border border-white/10 text-[11px] font-bold text-zinc-300 hover:text-white active:scale-95 transition-all"
             >
               <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
               <span>{t.tabRules}</span>
@@ -212,7 +236,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
                 onResetWallet();
                 onClose();
               }}
-              className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-slate-800/80 border border-slate-700 text-[11px] font-semibold text-slate-300 hover:text-amber-400"
+              className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-2xl bg-zinc-900 border border-white/10 text-[11px] font-bold text-zinc-300 hover:text-amber-400 active:scale-95 transition-all"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset ₹10k</span>

@@ -16,6 +16,22 @@
     to { transform: scale(1); opacity: 1; }
   }
 
+  @keyframes coinFlip3D {
+    0% { transform: perspective(800px) rotateY(0deg); }
+    50% { transform: perspective(800px) rotateY(180deg) scale(1.1); }
+    100% { transform: perspective(800px) rotateY(360deg); }
+  }
+
+  @keyframes float3D {
+    0%, 100% { transform: translateY(0px) rotateX(0deg); }
+    50% { transform: translateY(-8px) rotateX(6deg); }
+  }
+
+  @keyframes goldShine {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
   .animate-fadeIn {
     animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -27,8 +43,26 @@
   .animate-scaleUp {
     animation: scaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
+
+  .animate-coin3D {
+    animation: coinFlip3D 3s infinite ease-in-out;
+  }
+
+  .animate-float3D {
+    animation: float3D 2.5s ease-in-out infinite;
+  }
+
+  .gold-shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    animation: goldShine 2.5s infinite;
+  }
 }
 
 body {
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #09090b;
+  color: #f4f4f5;
+  overflow-x: hidden;
 }
+

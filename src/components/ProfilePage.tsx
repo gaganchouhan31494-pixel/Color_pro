@@ -18,6 +18,7 @@ import {
   Globe,
   Lock,
   ChevronRight,
+  Palette,
 } from 'lucide-react';
 import { AppPage, Language, UserAccount, UserWallet } from '../types';
 import { formatCurrency } from '../utils/gameLogic';
@@ -32,6 +33,7 @@ interface ProfilePageProps {
   onToggleSound: () => void;
   soundEnabled: boolean;
   onToggleLanguage: () => void;
+  onOpenThemeModal?: () => void;
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({
@@ -43,6 +45,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onToggleSound,
   soundEnabled,
   onToggleLanguage,
+  onOpenThemeModal,
 }) => {
   const [copiedUid, setCopiedUid] = useState(false);
 
@@ -247,6 +250,35 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </div>
           <ChevronRight className="w-4 h-4 text-slate-500" />
         </button>
+
+        {/* Theme customization */}
+        {onOpenThemeModal && (
+          <button
+            id="profile-btn-theme"
+            onClick={onOpenThemeModal}
+            className="w-full p-3.5 flex items-center justify-between hover:bg-slate-800/40 rounded-2xl transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                <Palette className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <span className="text-xs font-bold text-white block">
+                  {language === 'hi' ? 'कलर थीम (Casino Visual Theme)' : 'Visual Color Theme'}
+                </span>
+                <span className="text-[10px] text-amber-400">
+                  {language === 'hi' ? 'Emerald, Cyber Neon, Gold, Ruby' : 'Emerald, Cyber Neon, Royal Gold, Ruby'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-lg">
+                {language === 'hi' ? 'बदलें' : 'Change'}
+              </span>
+              <ChevronRight className="w-4 h-4 text-slate-500" />
+            </div>
+          </button>
+        )}
 
         {/* Language switch */}
         <div className="p-3.5 flex items-center justify-between">

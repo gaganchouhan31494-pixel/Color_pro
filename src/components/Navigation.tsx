@@ -10,9 +10,11 @@ import {
   User,
   LogIn,
   Sparkles,
+  Menu,
 } from 'lucide-react';
 import { AppPage, Language } from '../types';
 import { translations } from '../utils/translations';
+import { sound } from '../utils/sound';
 
 interface NavigationProps {
   activePage: AppPage;
@@ -29,6 +31,11 @@ export const Navigation: React.FC<NavigationProps> = ({
 }) => {
   const t = translations[language];
 
+  const handleNav = (page: AppPage) => {
+    sound.playClick();
+    onSelectPage(page);
+  };
+
   const navItems: Array<{ id: AppPage; label: string; icon: React.ElementType; badge?: string }> = [
     { id: 'game', label: t.navGame, icon: Gamepad2 },
     { id: 'deposit', label: t.navDeposit, icon: Wallet, badge: '+10%' },
@@ -42,10 +49,10 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   return (
     <>
-      {/* Top Category Horizontal Scroll Bar (Responsive: Smooth scroll on Mobile, Centered on Desktop) */}
+      {/* Top Category Horizontal Navigation (Desktop & Mobile Scroll) with animated crisp styling */}
       <nav
         id="main-category-navigation"
-        className="w-full max-w-4xl mx-auto bg-slate-900/90 border border-slate-800/90 rounded-2xl shadow-lg p-1 sm:p-1.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none"
+        className="w-full max-w-4xl mx-auto bg-zinc-950/90 border border-white/15 rounded-2xl shadow-xl p-1.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none backdrop-blur-xl"
       >
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -54,22 +61,22 @@ export const Navigation: React.FC<NavigationProps> = ({
             <button
               key={item.id}
               id={`nav-btn-${item.id}`}
-              onClick={() => onSelectPage(item.id)}
-              className={`relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex-shrink-0 active:scale-95 ${
+              onClick={() => handleNav(item.id)}
+              className={`relative flex items-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl text-xs font-black transition-all duration-150 whitespace-nowrap flex-shrink-0 active:scale-95 ${
                 isActive
-                  ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md shadow-emerald-950 border border-emerald-500/40'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-transparent'
+                  ? 'bg-white text-zinc-950 shadow-md shadow-white/20 border border-white'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent'
               }`}
             >
-              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+              <Icon className="w-4 h-4 flex-shrink-0" />
               <span>{item.label}</span>
               {item.badge && (
-                <span className={`text-[8px] sm:text-[9px] font-mono font-black uppercase px-1.5 py-0.5 rounded-full ${
+                <span className={`text-[8px] sm:text-[9px] font-mono font-black uppercase px-1.5 py-0.2 rounded-full ${
                   item.badge === '+10%'
-                    ? 'bg-amber-400 text-slate-950 animate-pulse'
+                    ? 'bg-amber-400 text-zinc-950 animate-pulse'
                     : item.badge === 'Hot'
                     ? 'bg-rose-500 text-white'
-                    : 'bg-indigo-500 text-white'
+                    : 'bg-emerald-500 text-white'
                 }`}>
                   {item.badge}
                 </span>
@@ -79,89 +86,107 @@ export const Navigation: React.FC<NavigationProps> = ({
         })}
       </nav>
 
-      {/* Mobile Bottom Dock (Fixed 5-Key Native Touch Navigation) */}
+      {/* Floating Bottom Menu Dock (Elevated ABOVE the bottom edge with 3D animation buttons) */}
       <nav
         id="mobile-bottom-navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/90 px-3 py-1.5 shadow-[0_-10px_30px_rgba(0,0,0,0.7)]"
+        className="md:hidden fixed bottom-4 left-3 right-3 sm:left-6 sm:right-6 max-w-md mx-auto z-40 bg-zinc-950/95 backdrop-blur-2xl border border-white/20 rounded-3xl px-2 py-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.9)] transition-all animate-slideUp"
       >
-        <div className="flex items-center justify-between max-w-md mx-auto">
-          {/* 1. Game */}
+        <div className="flex items-center justify-between">
+          {/* 1. Game Tab */}
           <button
             id="mobile-nav-game"
-            onClick={() => onSelectPage('game')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 min-w-[56px] transition-all active:scale-95 ${
-              activePage === 'game' ? 'text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+            onClick={() => handleNav('game')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all duration-150 active:scale-90 ${
+              activePage === 'game' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <Gamepad2 className={`w-5 h-5 ${activePage === 'game' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            <span className="text-[10px] font-semibold tracking-tight mt-0.5">
+            <div className="relative">
+              <Gamepad2 className={`w-5 h-5 ${activePage === 'game' ? 'stroke-[2.5] text-white scale-110' : 'stroke-2'}`} />
+              {activePage === 'game' && (
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_#ffffff]" />
+              )}
+            </div>
+            <span className={`text-[10px] font-bold tracking-tight mt-1 ${activePage === 'game' ? 'text-white font-black' : 'text-zinc-400'}`}>
               {t.navGame}
             </span>
           </button>
 
-          {/* 2. Withdraw */}
+          {/* 2. Withdraw Tab */}
           <button
             id="mobile-nav-withdraw"
-            onClick={() => onSelectPage('withdraw')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 min-w-[56px] transition-all active:scale-95 ${
-              activePage === 'withdraw' ? 'text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+            onClick={() => handleNav('withdraw')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all duration-150 active:scale-90 ${
+              activePage === 'withdraw' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            <ArrowDownCircle className={`w-5 h-5 ${activePage === 'withdraw' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            <span className="text-[10px] font-semibold tracking-tight mt-0.5">
+            <div className="relative">
+              <ArrowDownCircle className={`w-5 h-5 ${activePage === 'withdraw' ? 'stroke-[2.5] text-white scale-110' : 'stroke-2'}`} />
+              {activePage === 'withdraw' && (
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_#ffffff]" />
+              )}
+            </div>
+            <span className={`text-[10px] font-bold tracking-tight mt-1 ${activePage === 'withdraw' ? 'text-white font-black' : 'text-zinc-400'}`}>
               {t.navWithdraw}
             </span>
           </button>
 
-          {/* 3. CENTER RAISED 3D DEPOSIT ACTION BUTTON */}
-          <div className="flex-1 flex justify-center -mt-5">
+          {/* 3. CENTER 3D FLOATING DEPOSIT BUTTON WITH +10% BONUS */}
+          <div className="flex-1 flex justify-center -mt-6">
             <button
               id="mobile-nav-deposit-center"
-              onClick={() => onSelectPage('deposit')}
-              className="relative flex flex-col items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-500 via-teal-400 to-amber-300 text-slate-950 p-0.5 shadow-xl shadow-emerald-500/40 border-2 border-slate-900 active:scale-90 transition-transform"
+              onClick={() => handleNav('deposit')}
+              className="relative flex flex-col items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-white text-zinc-950 p-1 shadow-[0_8px_20px_rgba(251,191,36,0.5)] border-2 border-zinc-950 active:scale-90 transition-transform active:translate-y-1"
             >
-              <div className="w-full h-full rounded-full bg-gradient-to-b from-emerald-400 to-teal-600 flex flex-col items-center justify-center text-slate-950">
-                <Wallet className="w-5 h-5 text-slate-950 stroke-[2.5]" />
-                <span className="text-[8px] font-black uppercase tracking-wider text-slate-950 leading-tight">
+              <div className="w-full h-full rounded-full bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 flex flex-col items-center justify-center text-zinc-950 shadow-inner">
+                <Wallet className="w-5 h-5 text-zinc-950 stroke-[2.5]" />
+                <span className="text-[8px] font-black uppercase tracking-wider text-zinc-950 leading-none mt-0.5">
                   +10%
                 </span>
               </div>
             </button>
           </div>
 
-          {/* 4. Refer & Earn */}
+          {/* 4. Refer & Earn Tab */}
           <button
             id="mobile-nav-refer"
-            onClick={() => onSelectPage('refer')}
-            className={`relative flex flex-col items-center justify-center flex-1 py-1 min-w-[56px] transition-all active:scale-95 ${
-              activePage === 'refer' ? 'text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+            onClick={() => handleNav('refer')}
+            className={`relative flex flex-col items-center justify-center flex-1 py-1 transition-all duration-150 active:scale-90 ${
+              activePage === 'refer' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <div className="relative">
-              <Users2 className={`w-5 h-5 ${activePage === 'refer' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-              <span className="absolute -top-1 -right-2 text-[7px] font-black bg-rose-500 text-white px-1 rounded-full">
+              <Users2 className={`w-5 h-5 ${activePage === 'refer' ? 'stroke-[2.5] text-white scale-110' : 'stroke-2'}`} />
+              <span className="absolute -top-1 -right-2 text-[7px] font-black bg-rose-500 text-white px-1 rounded-full animate-pulse">
                 HOT
               </span>
+              {activePage === 'refer' && (
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_#ffffff]" />
+              )}
             </div>
-            <span className="text-[10px] font-semibold tracking-tight mt-0.5">
+            <span className={`text-[10px] font-bold tracking-tight mt-1 ${activePage === 'refer' ? 'text-white font-black' : 'text-zinc-400'}`}>
               {t.navRefer}
             </span>
           </button>
 
-          {/* 5. Profile / Account */}
+          {/* 5. Profile Tab */}
           <button
             id="mobile-nav-profile"
-            onClick={() => onSelectPage(isLoggedIn ? 'profile' : 'auth')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 min-w-[56px] transition-all active:scale-95 ${
-              activePage === 'profile' || activePage === 'auth' ? 'text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+            onClick={() => handleNav(isLoggedIn ? 'profile' : 'auth')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all duration-150 active:scale-90 ${
+              activePage === 'profile' || activePage === 'auth' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            {isLoggedIn ? (
-              <User className={`w-5 h-5 ${activePage === 'profile' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            ) : (
-              <LogIn className={`w-5 h-5 ${activePage === 'auth' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            )}
-            <span className="text-[10px] font-semibold tracking-tight mt-0.5">
+            <div className="relative">
+              {isLoggedIn ? (
+                <User className={`w-5 h-5 ${activePage === 'profile' ? 'stroke-[2.5] text-white scale-110' : 'stroke-2'}`} />
+              ) : (
+                <LogIn className={`w-5 h-5 ${activePage === 'auth' ? 'stroke-[2.5] text-white scale-110' : 'stroke-2'}`} />
+              )}
+              {(activePage === 'profile' || activePage === 'auth') && (
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_#ffffff]" />
+              )}
+            </div>
+            <span className={`text-[10px] font-bold tracking-tight mt-1 ${activePage === 'profile' || activePage === 'auth' ? 'text-white font-black' : 'text-zinc-400'}`}>
               {isLoggedIn ? t.navProfile : t.navLogin}
             </span>
           </button>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   AppPage,
   BetTargetType,
+  ColorThemeId,
   ColorType,
   DepositRecord,
   GameMode,
@@ -37,6 +38,9 @@ import { ColorReductionGame } from './components/ColorReductionGame';
 import { VIPTicker } from './components/VIPTicker';
 import { Hero3DBanner } from './components/Hero3DBanner';
 import { MobileDrawer } from './components/MobileDrawer';
+import { ThemeModal } from './components/ThemeModal';
+import { LiveBetsFeed } from './components/LiveBetsFeed';
+import { COLOR_THEMES } from './utils/themeConfig';
 import {
   calculateBetResult,
   formatCurrency,
@@ -171,9 +175,9 @@ export default function App() {
       // ignore
     }
     return {
-      '30s': generateInitialHistory('30s', 25),
-      '1m': generateInitialHistory('1m', 25),
-      '3m': generateInitialHistory('3m', 20),
+      '30s': generateInitialHistory('30s', 35),
+      '1m': generateInitialHistory('1m', 35),
+      '3m': generateInitialHistory('3m', 30),
     };
   });
 
@@ -213,6 +217,27 @@ export default function App() {
   const [rechargeModalOpen, setRechargeModalOpen] = useState<boolean>(false);
   const [rulesModalOpen, setRulesModalOpen] = useState<boolean>(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState<boolean>(false);
+  const [themeModalOpen, setThemeModalOpen] = useState<boolean>(false);
+  const [currentTheme, setCurrentTheme] = useState<ColorThemeId>(() => {
+    try {
+      const saved = localStorage.getItem('color_game_theme');
+      if (saved && ['monochrome', 'emerald', 'cyber', 'royalGold', 'rubyMonaco'].includes(saved)) {
+        return saved as ColorThemeId;
+      }
+    } catch {
+      // ignore
+    }
+    return 'monochrome';
+  });
+
+  // Persist active color theme
+  useEffect(() => {
+    try {
+      localStorage.setItem('color_game_theme', currentTheme);
+    } catch {
+      // ignore
+    }
+  }, [currentTheme]);
 
   // 12. Clock & Period Timer Management
   const [remainingSeconds, setRemainingSeconds] = useState<number>(30);
@@ -530,9 +555,14 @@ export default function App() {
   const currentModeHistory = history[gameMode] || [];
   const currentModeBets = userBets.filter((b) => b.gameMode === gameMode);
   const isLocked = remainingSeconds <= 5;
+  const activeTheme = COLOR_THEMES[currentTheme] || COLOR_THEMES.emerald;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-24 sm:pb-12">
+    <div className={`min-h-screen ${activeTheme.bgClass} text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-32 sm:pb-16 relative overflow-x-hidden transition-colors duration-500`}>
+      {/* Dynamic Ambient Background Glows */}
+      <div className={`fixed -top-40 -left-40 w-96 h-96 ${activeTheme.ambientGlow1} rounded-full blur-[140px] pointer-events-none transition-all duration-700 z-0`} />
+      <div className={`fixed top-1/3 -right-40 w-96 h-96 ${activeTheme.ambientGlow2} rounded-full blur-[140px] pointer-events-none transition-all duration-700 z-0`} />
+
       {/* Top Sticky Header */}
       <Header
         wallet={wallet}
@@ -546,10 +576,11 @@ export default function App() {
         onOpenAuth={() => setAuthModalOpen(true)}
         onSelectPage={(page) => setActivePage(page)}
         onOpenMobileDrawer={() => setMobileDrawerOpen(true)}
+        onOpenThemeModal={() => setThemeModalOpen(true)}
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-4 py-3 sm:py-5 space-y-4 sm:space-y-5">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-4 py-3 sm:py-5 space-y-4 sm:space-y-5 relative z-10">
         {/* Navigation Bar for Desktop & Mobile */}
         <Navigation
           activePage={activePage}
@@ -575,34 +606,62 @@ export default function App() {
               onSelectGameTab={(tab) => setActiveGameTab(tab)}
             />
 
-            {/* Top Game Switcher Tabs: Win Go vs Color Reduction */}
-            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-md">
-              <button
-                id="tab-select-wingo"
-                onClick={() => setActiveGameTab('wingo')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                  activeGameTab === 'wingo'
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }`}
-              >
-                <Dices className="w-4 h-4 text-emerald-300" />
-                <span>{t.modeWinGo}</span>
-              </button>
+            {/* Top Game Switcher Tabs with Quick Theme Selector Badge */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex-1 flex items-center gap-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-md backdrop-blur-md">
+                <button
+                  id="tab-select-wingo"
+                  onClick={() => setActiveGameTab('wingo')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    activeGameTab === 'wingo'
+                      ? activeTheme.activeTabClass
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <Dices className="w-4 h-4 text-emerald-300" />
+                  <span>{t.modeWinGo}</span>
+                </button>
 
+                <button
+                  id="tab-select-reduction"
+                  onClick={() => setActiveGameTab('reduction')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                    activeGameTab === 'reduction'
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <Sliders className="w-4 h-4 text-indigo-300" />
+                  <span>{t.modeColorReduction}</span>
+                  <span className="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded font-mono font-bold uppercase hidden sm:inline-block">
+                    NEW
+                  </span>
+                </button>
+              </div>
+
+              {/* Quick Theme Badge Button on Game Page */}
               <button
-                id="tab-select-reduction"
-                onClick={() => setActiveGameTab('reduction')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                  activeGameTab === 'reduction'
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }`}
+                id="btn-quick-theme-toggle"
+                onClick={() => setThemeModalOpen(true)}
+                className="flex items-center justify-between sm:justify-center gap-2 bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 px-3 py-2.5 rounded-2xl text-xs font-bold text-slate-300 transition-all shadow-md group"
+                title="Change Theme / कलर थीम बदलें"
               >
-                <Sliders className="w-4 h-4 text-indigo-300" />
-                <span>{t.modeColorReduction}</span>
-                <span className="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded font-mono font-bold uppercase hidden sm:inline-block">
-                  NEW
+                <div className="flex items-center gap-1.5">
+                  <div className="flex -space-x-1">
+                    {activeTheme.previewColors.slice(0, 3).map((c, i) => (
+                      <span
+                        key={i}
+                        className="w-3 h-3 rounded-full border border-slate-900"
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-200">
+                    {language === 'hi' ? activeTheme.nameHi.split(' ')[0] : activeTheme.name}
+                  </span>
+                </div>
+                <span className="text-[10px] text-amber-400 font-extrabold uppercase tracking-wider bg-amber-400/10 border border-amber-400/30 px-1.5 py-0.5 rounded-md">
+                  {language === 'hi' ? 'थीम बदलें' : 'Theme'}
                 </span>
               </button>
             </div>
@@ -678,6 +737,9 @@ export default function App() {
                     });
                   }}
                 />
+
+                {/* Real-time Live Players Bets Feed (Rich Dummy Data & Pool) */}
+                <LiveBetsFeed language={language} />
 
                 {/* History, Trend Chart, User Bets & Rules */}
                 <HistoryAndTrends
@@ -766,6 +828,7 @@ export default function App() {
             onToggleSound={() => setSoundEnabled((v) => !v)}
             soundEnabled={soundEnabled}
             onToggleLanguage={() => setLanguage((l) => (l === 'en' ? 'hi' : 'en'))}
+            onOpenThemeModal={() => setThemeModalOpen(true)}
           />
         )}
       </main>
@@ -847,6 +910,19 @@ export default function App() {
         onToggleLanguage={() => setLanguage((l) => (l === 'en' ? 'hi' : 'en'))}
         onOpenRules={() => setRulesModalOpen(true)}
         onResetWallet={handleResetWallet}
+        onOpenThemeModal={() => setThemeModalOpen(true)}
+      />
+
+      {/* Theme Customizer Modal */}
+      <ThemeModal
+        isOpen={themeModalOpen}
+        onClose={() => setThemeModalOpen(false)}
+        currentTheme={currentTheme}
+        onSelectTheme={(themeId) => {
+          setCurrentTheme(themeId);
+          sound.playClick();
+        }}
+        language={language}
       />
     </div>
   );

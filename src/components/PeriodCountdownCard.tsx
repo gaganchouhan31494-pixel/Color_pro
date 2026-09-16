@@ -27,66 +27,70 @@ export const PeriodCountdownCard: React.FC<PeriodCountdownCardProps> = ({
   const sStr = String(seconds).padStart(2, '0');
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
+    <div className="bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-slate-950/95 border border-slate-800/90 rounded-3xl p-4 sm:p-5 shadow-2xl relative overflow-hidden backdrop-blur-xl">
       {/* Subtle background glow */}
-      <div className={`absolute -right-16 -top-16 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none transition-colors duration-500 ${
+      <div className={`absolute -right-16 -top-16 w-52 h-52 rounded-full blur-3xl opacity-25 pointer-events-none transition-colors duration-500 ${
         isLocked ? 'bg-rose-500' : 'bg-emerald-500'
       }`} />
+      <div className="absolute -left-12 -bottom-12 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top row: Period ID & Countdown Timer */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
         {/* Period Details */}
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold uppercase tracking-wider mb-1">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
             <span>{t.period}</span>
+            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.2 rounded-full font-mono">
+              PROVABLY FAIR
+            </span>
           </div>
-          <div className="font-mono text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <div className="font-mono text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2 drop-shadow-sm">
             <span>{period}</span>
           </div>
         </div>
 
-        {/* Digital Countdown Timer */}
+        {/* Digital Countdown Timer with High-Def LED Bezel */}
         <div className="flex flex-col items-start sm:items-end">
-          <div className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider mb-1 text-slate-400">
+          <div className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider mb-1">
             <Timer className={`w-3.5 h-3.5 ${isLocked ? 'text-rose-400 animate-pulse' : 'text-amber-400'}`} />
-            <span className={isLocked ? 'text-rose-400 font-bold' : 'text-slate-300'}>{t.countDown}</span>
+            <span className={isLocked ? 'text-rose-400 font-extrabold animate-pulse' : 'text-slate-300'}>{t.countDown}</span>
           </div>
 
           <div className="flex items-center gap-1.5 font-mono">
             {/* Minutes */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 bg-slate-950/80 p-1 rounded-2xl border border-slate-800 shadow-inner">
               <span className={`w-8 h-10 sm:w-9 sm:h-11 rounded-xl flex items-center justify-center text-xl sm:text-2xl font-black shadow-inner border ${
                 isLocked 
-                  ? 'bg-rose-950/80 border-rose-700/50 text-rose-300' 
-                  : 'bg-slate-800 border-slate-700 text-white'
+                  ? 'bg-rose-950/90 border-rose-600/60 text-rose-300 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]' 
+                  : 'bg-slate-900 border-slate-700/80 text-emerald-300 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]'
               }`}>
                 {mStr[0]}
               </span>
               <span className={`w-8 h-10 sm:w-9 sm:h-11 rounded-xl flex items-center justify-center text-xl sm:text-2xl font-black shadow-inner border ${
                 isLocked 
-                  ? 'bg-rose-950/80 border-rose-700/50 text-rose-300' 
-                  : 'bg-slate-800 border-slate-700 text-white'
+                  ? 'bg-rose-950/90 border-rose-600/60 text-rose-300 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]' 
+                  : 'bg-slate-900 border-slate-700/80 text-emerald-300 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]'
               }`}>
                 {mStr[1]}
               </span>
             </div>
 
-            <span className={`text-2xl font-bold ${isLocked ? 'text-rose-500 animate-pulse' : 'text-slate-500'}`}>:</span>
+            <span className={`text-2xl font-black ${isLocked ? 'text-rose-500 animate-pulse' : 'text-amber-400'}`}>:</span>
 
             {/* Seconds */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 bg-slate-950/80 p-1 rounded-2xl border border-slate-800 shadow-inner">
               <span className={`w-8 h-10 sm:w-9 sm:h-11 rounded-xl flex items-center justify-center text-xl sm:text-2xl font-black shadow-inner border ${
                 isLocked 
-                  ? 'bg-rose-950/80 border-rose-700/50 text-rose-300 animate-pulse' 
-                  : 'bg-slate-800 border-slate-700 text-white'
+                  ? 'bg-rose-950/90 border-rose-600/60 text-rose-300 animate-pulse drop-shadow-[0_0_10px_rgba(244,63,94,0.8)]' 
+                  : 'bg-slate-900 border-slate-700/80 text-amber-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]'
               }`}>
                 {sStr[0]}
               </span>
               <span className={`w-8 h-10 sm:w-9 sm:h-11 rounded-xl flex items-center justify-center text-xl sm:text-2xl font-black shadow-inner border ${
                 isLocked 
-                  ? 'bg-rose-950/80 border-rose-700/50 text-rose-300 animate-pulse' 
-                  : 'bg-slate-800 border-slate-700 text-white'
+                  ? 'bg-rose-950/90 border-rose-600/60 text-rose-300 animate-pulse drop-shadow-[0_0_10px_rgba(244,63,94,0.8)]' 
+                  : 'bg-slate-900 border-slate-700/80 text-amber-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]'
               }`}>
                 {sStr[1]}
               </span>
