@@ -1,619 +1,519 @@
-import React, { useState, useEffect } from 'react';
-import confetti from 'canvas-confetti';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Member,
-  TransactionRecord,
-  Package,
-  Leg,
-  PlanSettings,
-  ThemeColor,
+  AppPage,
+  BankAccount,
+  BetColor,
+  BetTargetType,
+  ColorThemeId,
+  DepositRecord,
+  GameMode,
+  GameResult,
+  Language,
+  ThemeConfig,
+  ThemeMode,
+  UserAccount,
+  UserBet,
+  UserWallet,
+  WithdrawRecord,
 } from './types';
-import {
-  INITIAL_MEMBERS,
-  INITIAL_TRANSACTIONS,
-  DEFAULT_PLAN_SETTINGS,
-  PACKAGES,
-} from './data/mlmData';
-import { Navbar } from './components/Navbar';
-import { DashboardView } from './components/DashboardView';
-import { GenealogyTreeView } from './components/GenealogyTreeView';
-import { LegalProofView } from './components/LegalProofView';
-import { TeamListView } from './components/TeamListView';
-import { IncomeStreamsView } from './components/IncomeStreamsView';
-import { PlanCalculatorView } from './components/PlanCalculatorView';
-import { PackagesView } from './components/PackagesView';
-import { WalletStatementsView } from './components/WalletStatementsView';
-import { AddMemberModal } from './components/AddMemberModal';
-import { formatCurrency } from './utils/mlmEngine';
-import { THEME_CONFIGS } from './utils/themePresets';
-import {
-  CheckCircle2,
-  AlertCircle,
-  LayoutDashboard,
-  GitMerge,
-  ShieldCheck,
-  Wallet,
-  Users,
-  Menu,
-} from 'lucide-react';
+import { COLOR_THEMES } from './utils/themeConfig';
+import { INITIAL_DEPOSITS, INITIAL_RESULTS, INITIAL_WITHDRAWALS } from './utils/dummyData';
+import { calculateOutcome, evaluateBet, generatePeriodId, formatCurrency } from './utils/gameLogic';
+import { sound } from './utils/sound';
 
-export function App() {
-  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
-  const [transactions, setTransactions] = useState<TransactionRecord[]>(INITIAL_TRANSACTIONS);
-  const [activeMemberId, setActiveMemberId] = useState<string>('MLM-1001');
-  const [treeRootId, setTreeRootId] = useState<string>('MLM-1001');
-  const [currentTab, setCurrentTab] = useState<string>('DASHBOARD');
-  const [lang, setLang] = useState<'hi' | 'en'>('hi'); // Default Hindi as requested by user prompt
-  const [settings, setSettings] = useState<PlanSettings>(DEFAULT_PLAN_SETTINGS);
+// Components
+import { Header } from './components/Header';
+import { Navigation } from './components/Navigation';
+import { VIPTicker } from './components/VIPTicker';
+import { PeriodCountdownCard } from './components/PeriodCountdownCard';
+import { BettingBoard } from './components/BettingBoard';
+import { BetModal } from './components/BetModal';
+import { HistoryAndTrends } from './components/HistoryAndTrends';
+import { TransactionsView } from './components/TransactionsView';
+import { RechargeModal } from './components/RechargeModal';
+import { WithdrawPage } from './components/WithdrawPage';
+import { RulesModal } from './components/RulesModal';
+import { ResultModal } from './components/ResultModal';
+import { ThemeModal } from './components/ThemeModal';
+import { MobileDrawer } from './components/MobileDrawer';
+import { ReferPage } from './components/ReferPage';
+import { ProofPage } from './components/ProofPage';
+import { SupportPage } from './components/SupportPage';
+import { ProfilePage } from './components/ProfilePage';
+import { AuthModal } from './components/AuthModal';
 
-  // Theme state (Transparent Glass Themes: emerald, sapphire, amber, purple, crimson)
-  const [theme, setTheme] = useState<ThemeColor>(() => {
-    const saved = localStorage.getItem('apex_binary_theme');
-    return (saved as ThemeColor) || 'emerald';
+export const App: React.FC = () => {
+  // Global Settings & Preferences
+  const [themeId, setThemeId] = useState<ColorThemeId>('monochrome');
+  const [language, setLanguage] = useState<Language>('hi'); // Default Hindi as preferred by user
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [activePage, setActivePage] = useState<AppPage>('game');
+
+  // User State & Wallet
+  const [wallet, setWallet] = useState<UserWallet>({
+    balance: 10000, // ₹10,000 instant demo testing balance
+    totalWon: 4500,
+    totalWithdrawn: 2500,
+    totalRecharged: 1500,
   });
 
-  const handleThemeChange = (newTheme: ThemeColor) => {
-    setTheme(newTheme);
-    localStorage.setItem('apex_binary_theme', newTheme);
-  };
+  const [user, setUser] = useState<UserAccount>({
+    id: 'USR-889102',
+    username: 'VIP_Player99',
+    phone: '+91 98765 43210',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
+    vipLevel: 1,
+    isLoggedIn: true,
+  });
 
-  const activeThemeConfig = THEME_CONFIGS[theme] || THEME_CONFIGS.emerald;
+  const [bankAccount, setBankAccount] = useState<BankAccount>({
+    accountName: 'VIP Player',
+    accountNumber: '50100491823901',
+    ifscCode: 'HDFC0001234',
+    bankName: 'HDFC Bank Ltd.',
+    upiId: 'vipplayer99@oksbi',
+  });
 
-  // Add Member Modal State
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  // Game Engine State
+  const [gameMode, setGameMode] = useState<GameMode>('parity');
+  const [periodId, setPeriodId] = useState<string>(() => generatePeriodId('parity'));
+  const [countdown, setCountdown] = useState<number>(30); // 30s parity cycle
+  const [duration, setDuration] = useState<number>(30);
+  const [results, setResults] = useState<GameResult[]>(INITIAL_RESULTS);
+  const [userBets, setUserBets] = useState<UserBet[]>([]);
+
+  // Financial records
+  const [deposits, setDeposits] = useState<DepositRecord[]>(INITIAL_DEPOSITS);
+  const [withdrawals, setWithdrawals] = useState<WithdrawRecord[]>(INITIAL_WITHDRAWALS);
+
+  // Modals & Drawers
+  const [isBetModalOpen, setIsBetModalOpen] = useState(false);
+  const [activeBetSelection, setActiveBetSelection] = useState<{
+    type: BetTargetType;
+    value: string;
+    multiplier: number;
+  } | null>(null);
+
+  const [isRechargeOpen, setIsRechargeOpen] = useState(false);
+  const [isRulesOpen, setIsRulesOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [targetPlacementId, setTargetPlacementId] = useState('MLM-1001');
-  const [targetLeg, setTargetLeg] = useState<Leg>('LEFT');
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [latestResultModal, setLatestResultModal] = useState<GameResult | null>(null);
 
-  // Flash Notification
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
+  const currentTheme = COLOR_THEMES[themeId] || COLOR_THEMES.monochrome;
 
-  const showToast = (text: string, type: 'success' | 'info' = 'success') => {
-    setToastMessage({ text, type });
-    setTimeout(() => setToastMessage(null), 4000);
-  };
+  // Sound sync
+  useEffect(() => {
+    sound.enabled = soundEnabled;
+  }, [soundEnabled]);
 
-  const currentMember = members.find((m) => m.id === activeMemberId) || members[0];
-
-  // Open add member modal helper
-  const handleOpenAddMember = (placementId?: string, leg?: Leg) => {
-    setTargetPlacementId(placementId || activeMemberId);
-    setTargetLeg(leg || 'LEFT');
-    setIsAddModalOpen(true);
-  };
-
-  // On Member Added callback
-  const handleMemberAdded = (updatedMembers: Member[], newMember: Member, spillover: boolean) => {
-    setMembers(updatedMembers);
-
-    // If active member was sponsor, give instant direct bonus
-    if (newMember.sponsorId === activeMemberId) {
-      const directBonus = (newMember.packageAmount * 10) / 100;
-      const directTxn: TransactionRecord = {
-        id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
-        date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        type: 'DIRECT',
-        title: 'Direct Referral Commission',
-        titleHi: 'डायरेक्ट स्पॉन्सर कमीशन',
-        amount: directBonus,
-        isCredit: true,
-        notes: `Sponsored ${newMember.name} (${newMember.id}) on ${newMember.packageName}`,
-        memberReference: newMember.id,
-        status: 'COMPLETED',
-      };
-      setTransactions((prev) => [directTxn, ...prev]);
+  // Handle direct 1-click Light / Dark Mode toggle
+  const handleToggleThemeMode = () => {
+    sound.playClick();
+    if (currentTheme.mode === 'dark') {
+      setThemeId('platinumLight');
+    } else {
+      setThemeId('monochrome');
     }
-
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
-
-    showToast(
-      lang === 'hi'
-        ? `नया डिस्ट्रीब्यूटर ${newMember.name} (${newMember.id}) सफलतापूर्वक जोड़ा गया! ${
-            spillover ? '(स्पिलओवर द्वारा नीचे प्लेस हुआ)' : ''
-          }`
-        : `New Distributor ${newMember.name} (${newMember.id}) added successfully! ${
-            spillover ? '(Auto-spillover placed)' : ''
-          }`
-    );
   };
 
-  // Run Daily 1:1 Matching Payout
-  const handleRunDailyMatching = () => {
-    const matchedBV = Math.min(currentMember.leftBV, currentMember.rightBV);
+  // Change Game Mode (Parity 30s, Sapre 1m, Bcone 3m, Emerd 5m)
+  const handleSelectGameMode = (mode: GameMode) => {
+    setGameMode(mode);
+    const newDur = mode === 'parity' ? 30 : mode === 'sapre' ? 60 : mode === 'bcone' ? 180 : 300;
+    setDuration(newDur);
+    setCountdown(newDur);
+    setPeriodId(generatePeriodId(mode));
+  };
 
-    if (matchedBV <= 0) {
-      showToast(
-        lang === 'hi'
-          ? 'मैचिंग के लिए दोनों लेग्स (Left और Right) में बिजनेस वॉल्यूम होना जरूरी है।'
-          : 'Both Left and Right legs need active business volume to generate 1:1 matching payout.',
-        'info'
-      );
+  // Sound tick for countdown
+  const countdownRef = useRef(countdown);
+  countdownRef.current = countdown;
+
+  // Countdown timer clock loop
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          // Time expired! Reveal new outcome
+          const newNumber = Math.floor(Math.random() * 10);
+          const outcome = calculateOutcome(newNumber);
+          const newResult: GameResult = {
+            period: periodId,
+            number: newNumber,
+            color: outcome.color,
+            colors: outcome.colors,
+            size: outcome.size,
+            hash: `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`,
+            timestamp: Date.now(),
+          };
+
+          // Evaluate user's pending bets for this period
+          let roundWin = 0;
+          let hasBetsInRound = false;
+
+          setUserBets((prevBets) => {
+            return prevBets.map((b) => {
+              if (b.period === periodId && b.status === 'pending') {
+                hasBetsInRound = true;
+                const { won, winAmount } = evaluateBet(b, newResult);
+                if (won) roundWin += winAmount;
+                return {
+                  ...b,
+                  status: won ? 'won' : 'lost',
+                  winAmount,
+                };
+              }
+              return b;
+            });
+          });
+
+          // Update wallet if user won
+          if (roundWin > 0) {
+            setWallet((w) => ({
+              ...w,
+              balance: w.balance + roundWin,
+              totalWon: w.totalWon + roundWin,
+            }));
+            sound.playWin();
+          } else if (hasBetsInRound) {
+            sound.playLoss();
+          }
+
+          // Show result modal if user participated in this round
+          if (hasBetsInRound) {
+            setLatestResultModal(newResult);
+          }
+
+          // Add to results history
+          setResults((prev) => [newResult, ...prev.slice(0, 49)]);
+
+          // Start next period
+          setPeriodId(generatePeriodId(gameMode, Date.now() + 1000));
+          return duration;
+        }
+
+        if (prev <= 6 && prev > 1) {
+          sound.playTick();
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [periodId, gameMode, duration]);
+
+  // Open Bet Placement Modal
+  const handleOpenBet = (type: BetTargetType, value: string, multiplier: number) => {
+    setActiveBetSelection({ type, value, multiplier });
+    setIsBetModalOpen(true);
+  };
+
+  // Confirm Place Bet (Called by BetModal)
+  const handleConfirmBet = (amount: number, multiplier: number, total: number) => {
+    if (!activeBetSelection) return;
+
+    if (total > wallet.balance) {
+      setIsRechargeOpen(true);
       return;
     }
 
-    const currentPkg = PACKAGES.find((p) => p.id === currentMember.packageId) || PACKAGES[0];
-    const rawPairIncome = (matchedBV * currentPkg.pairMatchingPercent) / 100;
-    const payableIncome = Math.min(rawPairIncome, currentPkg.dailyCapping);
+    // Deduct from balance
+    setWallet((w) => ({
+      ...w,
+      balance: w.balance - total,
+    }));
 
-    // Create Transaction
-    const newTxn: TransactionRecord = {
-      id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      type: 'PAIR_MATCHING',
-      title: '1:1 Binary Pair Matching Daily Cutoff',
-      titleHi: '1:1 बाइनरी पेयर मैचिंग दैनिक कटऑफ पेआउट',
-      amount: payableIncome,
-      isCredit: true,
-      notes: `Matched ${matchedBV.toLocaleString()} BV @ 10%. Excess volume carried forward.`,
-      status: 'COMPLETED',
+    const newBet: UserBet = {
+      id: `BET-${Date.now().toString().slice(-6)}`,
+      period: periodId,
+      gameMode,
+      targetType: activeBetSelection.type,
+      targetValue: activeBetSelection.value,
+      amount,
+      multiplier,
+      totalAmount: total,
+      status: 'pending',
+      createdAt: Date.now(),
     };
 
-    // Update member's leftBV and rightBV
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id === currentMember.id) {
-          return {
-            ...m,
-            leftBV: m.leftBV - matchedBV,
-            rightBV: m.rightBV - matchedBV,
-          };
-        }
-        return m;
-      })
-    );
+    setUserBets((prev) => [newBet, ...prev]);
+  };
 
-    setTransactions((prev) => [newTxn, ...prev]);
+  // Handle Deposit Success
+  const handleDepositSuccess = (
+    amount: number,
+    bonus: number,
+    method: string,
+    utr: string
+  ) => {
+    const totalCredit = amount + bonus;
+    setWallet((w) => ({
+      ...w,
+      balance: w.balance + totalCredit,
+      totalRecharged: w.totalRecharged + amount,
+    }));
 
-    confetti({
-      particleCount: 120,
-      spread: 90,
-      origin: { y: 0.5 },
+    const newRecord: DepositRecord = {
+      id: `DEP-${Math.floor(1000 + Math.random() * 9000)}`,
+      amount,
+      bonus,
+      method,
+      utr,
+      status: 'completed',
+      timestamp: Date.now(),
+    };
+
+    setDeposits((prev) => [newRecord, ...prev]);
+  };
+
+  // Handle Withdrawal Success
+  const handleWithdrawSuccess = (record: WithdrawRecord) => {
+    setWallet((w) => ({
+      ...w,
+      balance: w.balance - record.amount,
+      totalWithdrawn: w.totalWithdrawn + record.amount,
+    }));
+
+    setWithdrawals((prev) => [record, ...prev]);
+  };
+
+  // Reset demo wallet
+  const handleResetWallet = () => {
+    setWallet({
+      balance: 10000,
+      totalWon: 4500,
+      totalWithdrawn: 2500,
+      totalRecharged: 1500,
     });
-
-    showToast(
-      lang === 'hi'
-        ? `बधाई! ${matchedBV.toLocaleString()} BV मैच हुआ और ${formatCurrency(
-            payableIncome
-          )} पेआउट वॉलेट में क्रेडिट हुआ!`
-        : `Congratulations! ${matchedBV.toLocaleString()} BV matched and ${formatCurrency(
-            payableIncome
-          )} credited to your wallet!`
-    );
   };
 
-  // Handle Package Upgrade
-  const handleUpgradePackage = (pkg: Package) => {
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id === currentMember.id) {
-          return {
-            ...m,
-            packageId: pkg.id,
-            packageName: pkg.name,
-            packageAmount: pkg.price,
-            pv: pkg.pv,
-          };
-        }
-        return m;
-      })
-    );
-
-    confetti({
-      particleCount: 60,
-      spread: 60,
-      origin: { y: 0.6 },
-    });
-
-    showToast(
-      lang === 'hi'
-        ? `सफलतापूर्वक ${pkg.name} पैकेज पर अपग्रेड किया गया!`
-        : `Successfully upgraded to ${pkg.name} package!`
-    );
-  };
-
-  // Handle Withdrawal
-  const handleWithdrawal = (amount: number, method: string, accountDetail: string) => {
-    const netAmount = amount * 0.9;
-    const newTxn: TransactionRecord = {
-      id: `WTH-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      type: 'WITHDRAWAL',
-      title: `Bank Withdrawal via ${method}`,
-      titleHi: `${method} द्वारा बैंक खाता निकासी`,
-      amount: amount,
-      isCredit: false,
-      notes: `Transfer to ${accountDetail}. Net Credited: ${formatCurrency(netAmount)} (TDS 5% + Admin 5% deducted)`,
-      status: 'COMPLETED',
-    };
-
-    setTransactions((prev) => [newTxn, ...prev]);
-
-    showToast(
-      lang === 'hi'
-        ? `${formatCurrency(amount)} की निकासी प्रोसेस हुई! शुद्ध राशि ${formatCurrency(netAmount)} बैंक में भेजी गई।`
-        : `Withdrawal of ${formatCurrency(amount)} processed! Net ${formatCurrency(netAmount)} sent to ${accountDetail}.`
-    );
-  };
-
-  // Handle Mobile Recharge via Wallet
-  const handleRecharge = (amount: number, mobileNumber: string, operator: string, planName: string) => {
-    const rechargeTxnId = `RCH-${Math.floor(100000 + Math.random() * 900000)}`;
-    const cashbackTxnId = `CBK-${Math.floor(100000 + Math.random() * 900000)}`;
-    const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
-    const cashbackAmount = Math.max(1, Math.round(amount * 0.02)); // 2% MLM utility cashback
-
-    const debitTxn: TransactionRecord = {
-      id: rechargeTxnId,
-      date: dateStr,
-      type: 'MOBILE_RECHARGE',
-      title: `Mobile Recharge (${operator})`,
-      titleHi: `मोबाइल रिचार्ज (${operator})`,
-      amount: amount,
-      isCredit: false,
-      notes: `${operator} Mobile: +91 ${mobileNumber} | Plan: ${planName}. Operator Ref: ${operator.toUpperCase().slice(0, 3)}-${Math.floor(10000000 + Math.random() * 90000000)}`,
-      status: 'COMPLETED',
-    };
-
-    const cashbackTxn: TransactionRecord = {
-      id: cashbackTxnId,
-      date: dateStr,
-      type: 'MOBILE_RECHARGE',
-      title: `Recharge 2% Cashback Bonus`,
-      titleHi: `मोबाइल रिचार्ज 2% कैशबैक बोनस`,
-      amount: cashbackAmount,
-      isCredit: true,
-      notes: `Instant 2% utility cashback earned on Mobile Recharge ₹${amount} (${operator})`,
-      status: 'COMPLETED',
-    };
-
-    setTransactions((prev) => [cashbackTxn, debitTxn, ...prev]);
-
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.7 },
-    });
-
-    showToast(
-      lang === 'hi'
-        ? `₹${amount} का ${operator} मोबाइल रिचार्ज सफल! +₹${cashbackAmount} कैशबैक वॉलेट में क्रेडिट हुआ।`
-        : `Mobile recharge of ₹${amount} for ${operator} successful! +₹${cashbackAmount} cashback credited to wallet.`
-    );
-  };
+  const isLight = currentTheme.mode === 'light';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative selection:bg-emerald-500 selection:text-white pb-28 sm:pb-8">
-      {/* Ambient Transparent Theme Glow Backdrop (Non-intrusive) */}
-      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div
-          className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[500px] rounded-full blur-[140px] opacity-25 transition-all duration-700"
-          style={{ backgroundColor: activeThemeConfig.hex }}
-        />
-        <div
-          className="absolute top-1/2 -left-40 w-[500px] h-[500px] rounded-full blur-[160px] opacity-15 transition-all duration-700"
-          style={{ backgroundColor: activeThemeConfig.hex }}
-        />
-        <div
-          className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full blur-[160px] opacity-20 transition-all duration-700"
-          style={{ backgroundColor: activeThemeConfig.hex }}
-        />
-      </div>
-
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-20 right-4 z-50 animate-slideUp">
-          <div
-            className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl border text-xs font-semibold backdrop-blur-xl ${
-              toastMessage.type === 'success'
-                ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40'
-                : 'bg-amber-950/90 text-amber-300 border-amber-500/40'
-            }`}
-          >
-            {toastMessage.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-            )}
-            <span>{toastMessage.text}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Navigation Header with Theme Switcher */}
-      <Navbar
-        currentTab={currentTab}
-        onTabChange={setCurrentTab}
-        members={members}
-        currentMemberId={activeMemberId}
-        onMemberChange={(id) => {
-          setActiveMemberId(id);
-          setTreeRootId(id);
-          showToast(
-            lang === 'hi'
-              ? `स्विच किया गया: ${members.find((m) => m.id === id)?.name}`
-              : `Switched view to ${members.find((m) => m.id === id)?.name}`,
-            'info'
-          );
-        }}
-        onOpenAddMember={() => handleOpenAddMember()}
-        theme={theme}
-        onThemeChange={handleThemeChange}
-        lang={lang}
-        onToggleLang={() => setLang((prev) => (prev === 'hi' ? 'en' : 'hi'))}
-        isMobileDrawerOpen={isMobileDrawerOpen}
-        onToggleMobileDrawer={() => setIsMobileDrawerOpen((prev) => !prev)}
+    <div
+      id="app-root-container"
+      className={`min-h-screen transition-colors duration-200 ${currentTheme.bgClass} ${
+        isLight ? 'text-slate-900' : 'text-slate-100'
+      }`}
+    >
+      {/* 1. Universal Sticky Header */}
+      <Header
+        wallet={wallet}
+        user={user}
+        language={language}
+        soundEnabled={soundEnabled}
+        themeMode={currentTheme.mode}
+        onToggleThemeMode={handleToggleThemeMode}
+        onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        onToggleLanguage={() => setLanguage(language === 'en' ? 'hi' : 'en')}
+        onOpenRecharge={() => setIsRechargeOpen(true)}
+        onOpenRules={() => setIsRulesOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onSelectPage={(p) => setActivePage(p)}
+        onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
       />
 
-      {/* Main View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {currentTab === 'DASHBOARD' && (
-          <DashboardView
-            member={currentMember}
-            allMembers={members}
-            transactions={transactions}
-            onOpenAddMember={handleOpenAddMember}
-            onRunDailyMatching={handleRunDailyMatching}
-            onNavigateTab={setCurrentTab}
-            lang={lang}
+      {/* Main Content Viewport */}
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-4 pb-24 md:pb-12">
+        {/* 2. Top Navigation Tabs Bar */}
+        <Navigation
+          activePage={activePage}
+          onSelectPage={(p) => setActivePage(p)}
+          language={language}
+          isLoggedIn={user.isLoggedIn}
+          themeMode={currentTheme.mode}
+          onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)}
+        />
+
+        {/* 3. Live Ticker Banner */}
+        <VIPTicker theme={currentTheme} />
+
+        {/* 4. Page View Router */}
+        {activePage === 'game' && (
+          <div className="space-y-4 animate-fadeIn">
+            {/* Countdown & Period ID Card */}
+            <PeriodCountdownCard
+              currentMode={gameMode}
+              onSelectMode={handleSelectGameMode}
+              periodId={periodId}
+              countdown={countdown}
+              duration={duration}
+              language={language}
+              theme={currentTheme}
+            />
+
+            {/* The Tactile 3D Betting Board */}
+            <BettingBoard
+              onSelectBet={handleOpenBet}
+              disabled={countdown <= 5}
+              language={language}
+              theme={currentTheme}
+              userBalance={wallet.balance}
+            />
+
+            {/* Game History, Records & Trends */}
+            <HistoryAndTrends
+              results={results}
+              userBets={userBets}
+              language={language}
+              theme={currentTheme}
+            />
+          </div>
+        )}
+
+        {activePage === 'deposit' && (
+          <div className="p-4 sm:p-6 rounded-3xl bg-zinc-950/80 border border-white/10 text-center space-y-4">
+            <h2 className="text-xl font-black text-white">Instant Wallet Recharge</h2>
+            <p className="text-xs text-zinc-400">
+              Get an instant +10% cash bonus credited directly to your gaming balance.
+            </p>
+            <button
+              onClick={() => setIsRechargeOpen(true)}
+              className="px-6 py-3 rounded-2xl bg-amber-400 text-zinc-950 font-black text-sm shadow active:scale-95 transition-transform"
+            >
+              Open Recharge Gateway (+10% Bonus)
+            </button>
+          </div>
+        )}
+
+        {activePage === 'withdraw' && (
+          <WithdrawPage
+            wallet={wallet}
+            bankAccount={bankAccount}
+            onUpdateBankAccount={(acc) => setBankAccount(acc)}
+            onWithdraw={handleWithdrawSuccess}
+            language={language}
+            theme={currentTheme}
           />
         )}
 
-        {currentTab === 'TREE' && (
-          <GenealogyTreeView
-            members={members}
-            rootMemberId={treeRootId}
-            onSelectRoot={setTreeRootId}
-            onOpenAddMember={handleOpenAddMember}
-            lang={lang}
+        {activePage === 'transactions' && (
+          <TransactionsView
+            deposits={deposits}
+            withdrawals={withdrawals}
+            bets={userBets}
+            language={language}
+            theme={currentTheme}
+            onOpenDeposit={() => setIsRechargeOpen(true)}
+            onOpenWithdraw={() => setActivePage('withdraw')}
           />
         )}
 
-        {currentTab === 'PROOF' && (
-          <LegalProofView
-            members={members}
-            lang={lang}
-          />
+        {activePage === 'refer' && (
+          <ReferPage language={language} theme={currentTheme} />
         )}
 
-        {currentTab === 'TEAM' && (
-          <TeamListView
-            members={members}
-            currentMember={currentMember}
-            onSelectMember={(id) => {
-              setActiveMemberId(id);
-              setTreeRootId(id);
-              showToast(
-                lang === 'hi'
-                  ? `स्विच किया गया: ${members.find((m) => m.id === id)?.name}`
-                  : `Switched view to ${members.find((m) => m.id === id)?.name}`,
-                'info'
-              );
-            }}
-            onOpenAddMember={() => handleOpenAddMember()}
-            lang={lang}
-          />
+        {activePage === 'proof' && (
+          <ProofPage language={language} theme={currentTheme} />
         )}
 
-        {currentTab === 'INCOMES' && (
-          <IncomeStreamsView
-            lang={lang}
-            onNavigateToCalculator={() => setCurrentTab('CALCULATOR')}
-          />
+        {activePage === 'support' && (
+          <SupportPage language={language} theme={currentTheme} />
         )}
 
-        {currentTab === 'CALCULATOR' && <PlanCalculatorView lang={lang} />}
-
-        {currentTab === 'PACKAGES' && (
-          <PackagesView
-            currentMember={currentMember}
-            onUpgradePackage={handleUpgradePackage}
-            lang={lang}
-          />
-        )}
-
-        {currentTab === 'WALLET' && (
-          <WalletStatementsView
-            member={currentMember}
-            transactions={transactions}
-            onWithdraw={handleWithdrawal}
-            onRecharge={handleRecharge}
-            settings={settings}
-            lang={lang}
+        {activePage === 'profile' && (
+          <ProfilePage
+            user={user}
+            wallet={wallet}
+            bankAccount={bankAccount}
+            language={language}
+            theme={currentTheme}
+            onResetWallet={handleResetWallet}
+            onOpenDeposit={() => setIsRechargeOpen(true)}
+            onOpenWithdraw={() => setActivePage('withdraw')}
           />
         )}
       </main>
 
-      {/* Mobile Bottom Navigation Quick Bar */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-2xl border-t border-white/10 px-2 pt-1.5 pb-2.5 flex items-center justify-around shadow-2xl">
-        <button
-          onClick={() => {
-            setCurrentTab('DASHBOARD');
-            setIsMobileDrawerOpen(false);
+      {/* 5. Modals & Overlays */}
+      {/* Bet Modal (THE CORE "बैट लगाने वाला बटन" REQUIREMENT) */}
+      {activeBetSelection && (
+        <BetModal
+          isOpen={isBetModalOpen}
+          onClose={() => setIsBetModalOpen(false)}
+          targetType={activeBetSelection.type}
+          targetValue={activeBetSelection.value}
+          multiplier={activeBetSelection.multiplier}
+          userBalance={wallet.balance}
+          onConfirmBet={handleConfirmBet}
+          onOpenRecharge={() => {
+            setIsBetModalOpen(false);
+            setIsRechargeOpen(true);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl text-[10px] font-bold transition-all min-w-[54px] ${
-            currentTab === 'DASHBOARD' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          <div
-            className={`p-1 rounded-lg transition-all ${
-              currentTab === 'DASHBOARD' ? 'bg-white/10 shadow-sm' : ''
-            }`}
-          >
-            <LayoutDashboard
-              className="w-4 h-4"
-              style={{ color: currentTab === 'DASHBOARD' ? activeThemeConfig.hex : undefined }}
-            />
-          </div>
-          <span className="leading-none text-[10px]">{lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}</span>
-          {currentTab === 'DASHBOARD' && (
-            <div
-              className="w-1.5 h-1.5 rounded-full mt-0.5"
-              style={{ backgroundColor: activeThemeConfig.hex }}
-            />
-          )}
-        </button>
+          language={language}
+          theme={currentTheme}
+        />
+      )}
 
-        <button
-          onClick={() => {
-            setCurrentTab('TREE');
-            setIsMobileDrawerOpen(false);
-          }}
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl text-[10px] font-bold transition-all min-w-[54px] ${
-            currentTab === 'TREE' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          <div
-            className={`p-1 rounded-lg transition-all ${
-              currentTab === 'TREE' ? 'bg-white/10 shadow-sm' : ''
-            }`}
-          >
-            <GitMerge
-              className="w-4 h-4"
-              style={{ color: currentTab === 'TREE' ? activeThemeConfig.hex : undefined }}
-            />
-          </div>
-          <span className="leading-none text-[10px]">{lang === 'hi' ? 'ट्री' : 'Tree'}</span>
-          {currentTab === 'TREE' && (
-            <div
-              className="w-1.5 h-1.5 rounded-full mt-0.5"
-              style={{ backgroundColor: activeThemeConfig.hex }}
-            />
-          )}
-        </button>
-
-        <button
-          onClick={() => {
-            setCurrentTab('PROOF');
-            setIsMobileDrawerOpen(false);
-          }}
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl text-[10px] font-bold transition-all min-w-[54px] ${
-            currentTab === 'PROOF' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          <div
-            className={`p-1 rounded-lg transition-all ${
-              currentTab === 'PROOF' ? 'bg-white/10 shadow-sm' : ''
-            }`}
-          >
-            <ShieldCheck
-              className="w-4 h-4"
-              style={{ color: currentTab === 'PROOF' ? activeThemeConfig.hex : undefined }}
-            />
-          </div>
-          <span className="leading-none text-[10px]">{lang === 'hi' ? 'प्रूफ' : 'Proof'}</span>
-          {currentTab === 'PROOF' && (
-            <div
-              className="w-1.5 h-1.5 rounded-full mt-0.5"
-              style={{ backgroundColor: activeThemeConfig.hex }}
-            />
-          )}
-        </button>
-
-        <button
-          onClick={() => {
-            setCurrentTab('WALLET');
-            setIsMobileDrawerOpen(false);
-          }}
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl text-[10px] font-bold transition-all min-w-[54px] ${
-            currentTab === 'WALLET' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          <div
-            className={`p-1 rounded-lg transition-all ${
-              currentTab === 'WALLET' ? 'bg-white/10 shadow-sm' : ''
-            }`}
-          >
-            <Wallet
-              className="w-4 h-4"
-              style={{ color: currentTab === 'WALLET' ? activeThemeConfig.hex : undefined }}
-            />
-          </div>
-          <span className="leading-none text-[10px]">{lang === 'hi' ? 'वॉलेट' : 'Wallet'}</span>
-          {currentTab === 'WALLET' && (
-            <div
-              className="w-1.5 h-1.5 rounded-full mt-0.5"
-              style={{ backgroundColor: activeThemeConfig.hex }}
-            />
-          )}
-        </button>
-
-        <button
-          onClick={() => setIsMobileDrawerOpen((prev) => !prev)}
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl text-[10px] font-bold transition-all min-w-[54px] ${
-            ['TEAM', 'INCOMES', 'CALCULATOR', 'PACKAGES'].includes(currentTab) || isMobileDrawerOpen
-              ? 'text-white'
-              : 'text-slate-400 hover:text-slate-300'
-          }`}
-        >
-          <div
-            className={`p-1 rounded-lg transition-all ${
-              ['TEAM', 'INCOMES', 'CALCULATOR', 'PACKAGES'].includes(currentTab) || isMobileDrawerOpen
-                ? 'bg-white/10 shadow-sm'
-                : ''
-            }`}
-          >
-            <Menu
-              className="w-4 h-4"
-              style={{
-                color:
-                  ['TEAM', 'INCOMES', 'CALCULATOR', 'PACKAGES'].includes(currentTab) || isMobileDrawerOpen
-                    ? activeThemeConfig.hex
-                    : undefined,
-              }}
-            />
-          </div>
-          <span className="leading-none text-[10px]">
-            {currentTab === 'TEAM'
-              ? lang === 'hi' ? 'टीम' : 'Team'
-              : currentTab === 'INCOMES'
-              ? lang === 'hi' ? 'इनकम' : 'Income'
-              : currentTab === 'CALCULATOR'
-              ? lang === 'hi' ? 'कैलकुलेटर' : 'Calc'
-              : currentTab === 'PACKAGES'
-              ? lang === 'hi' ? 'पैकेज' : 'Packages'
-              : lang === 'hi' ? 'मेन्यू' : 'Menu'}
-          </span>
-          {(['TEAM', 'INCOMES', 'CALCULATOR', 'PACKAGES'].includes(currentTab) || isMobileDrawerOpen) && (
-            <div
-              className="w-1.5 h-1.5 rounded-full mt-0.5"
-              style={{ backgroundColor: activeThemeConfig.hex }}
-            />
-          )}
-        </button>
-      </nav>
-
-      {/* Add Member Placement Modal */}
-      <AddMemberModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        members={members}
-        onMemberAdded={handleMemberAdded}
-        defaultPlacementId={targetPlacementId}
-        defaultLeg={targetLeg}
-        sponsorId={activeMemberId}
-        lang={lang}
+      {/* Recharge Modal */}
+      <RechargeModal
+        isOpen={isRechargeOpen}
+        onClose={() => setIsRechargeOpen(false)}
+        onDeposit={handleDepositSuccess}
+        language={language}
+        theme={currentTheme}
       />
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 bg-slate-950/70 backdrop-blur-md py-6 text-xs text-slate-500 text-center">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>
-            © 2026 {settings.companyName}. All Rights Reserved. Complete 1:1 Binary MLM Matrix System.
-          </p>
-          <div className="flex items-center gap-4 text-[11px]">
-            <span>1:1 Pair Matching</span>
-            <span>•</span>
-            <span>Anti-Duplicate System</span>
-            <span>•</span>
-            <span>Power Leg Carry Forward</span>
-          </div>
-        </div>
-      </footer>
+      {/* Rules Modal */}
+      <RulesModal
+        isOpen={isRulesOpen}
+        onClose={() => setIsRulesOpen(false)}
+        language={language}
+        theme={currentTheme}
+      />
+
+      {/* Color Themes Customizer Modal */}
+      <ThemeModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        currentTheme={themeId}
+        onSelectTheme={(tId) => setThemeId(tId)}
+        language={language}
+      />
+
+      {/* Mobile Drawer (Menu) */}
+      <MobileDrawer
+        isOpen={isMobileDrawerOpen}
+        onClose={() => setIsMobileDrawerOpen(false)}
+        activePage={activePage}
+        onSelectPage={(p) => setActivePage(p)}
+        user={user}
+        wallet={wallet}
+        language={language}
+        soundEnabled={soundEnabled}
+        themeMode={currentTheme.mode}
+        onToggleThemeMode={handleToggleThemeMode}
+        onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        onToggleLanguage={() => setLanguage(language === 'en' ? 'hi' : 'en')}
+        onOpenRules={() => setIsRulesOpen(true)}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
+        onResetWallet={handleResetWallet}
+      />
+
+      {/* Round Result Modal */}
+      <ResultModal
+        isOpen={Boolean(latestResultModal)}
+        onClose={() => setLatestResultModal(null)}
+        result={latestResultModal}
+        userBets={userBets}
+        language={language}
+        theme={currentTheme}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onLogin={(u) => setUser(u)}
+        language={language}
+        theme={currentTheme}
+      />
     </div>
   );
-}
+};
+
 export default App;
