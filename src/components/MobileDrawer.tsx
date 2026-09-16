@@ -17,8 +17,11 @@ import {
   RotateCcw,
   Sparkles,
   Palette,
+  Receipt,
+  Sun,
+  Moon,
 } from 'lucide-react';
-import { AppPage, Language, UserAccount, UserWallet } from '../types';
+import { AppPage, Language, UserAccount, UserWallet, ThemeMode } from '../types';
 import { translations } from '../utils/translations';
 import { formatCurrency } from '../utils/gameLogic';
 
@@ -36,6 +39,8 @@ interface MobileDrawerProps {
   onOpenRules: () => void;
   onResetWallet: () => void;
   onOpenThemeModal?: () => void;
+  themeMode?: ThemeMode;
+  onToggleThemeMode?: () => void;
 }
 
 export const MobileDrawer: React.FC<MobileDrawerProps> = ({
@@ -52,6 +57,8 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   onOpenRules,
   onResetWallet,
   onOpenThemeModal,
+  themeMode = 'dark',
+  onToggleThemeMode,
 }) => {
   if (!isOpen) return null;
 
@@ -66,6 +73,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
     { id: 'game', label: t.navGame, icon: Gamepad2 },
     { id: 'deposit', label: t.navDeposit, icon: Wallet, badge: '+10% Bonus' },
     { id: 'withdraw', label: t.navWithdraw, icon: ArrowDownCircle, badge: 'Instant' },
+    { id: 'transactions', label: language === 'hi' ? 'लेन-देन इतिहास' : 'Transactions', icon: Receipt, badge: 'New' },
     { id: 'refer', label: t.navRefer, icon: Users2, badge: 'Hot' },
     { id: 'proof', label: t.navProof, icon: CheckCircle2, badge: 'Live' },
     { id: 'support', label: t.navSupport, icon: Headphones, badge: '24/7' },
@@ -162,27 +170,44 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
 
         {/* Quick Settings & Tools Footer */}
         <div className="p-4 border-t border-white/10 bg-zinc-900/60 space-y-2">
-          {/* Quick theme selector button */}
-          {onOpenThemeModal && (
-            <button
-              id="drawer-btn-theme"
-              onClick={() => {
-                onOpenThemeModal();
-                onClose();
-              }}
-              className="w-full flex items-center justify-between py-2.5 px-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-bold text-white transition-all shadow-sm active:scale-95"
-            >
-              <div className="flex items-center gap-2">
-                <Palette className="w-4 h-4 text-white" />
-                <span className="text-white font-bold">
-                  {language === 'hi' ? 'कलर थीम बदलें' : 'Change Color Theme'}
-                </span>
-              </div>
-              <span className="text-[10px] bg-white/10 text-zinc-200 px-2 py-0.5 rounded-full font-mono font-bold">
-                Themes
-              </span>
-            </button>
-          )}
+          {/* Theme mode toggle & Theme customizer */}
+          <div className="grid grid-cols-2 gap-2">
+            {onToggleThemeMode && (
+              <button
+                id="drawer-btn-theme-mode"
+                onClick={onToggleThemeMode}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-bold text-white transition-all shadow-sm active:scale-95"
+              >
+                {themeMode === 'light' ? (
+                  <>
+                    <Moon className="w-4 h-4 text-indigo-400" />
+                    <span>{language === 'hi' ? 'डार्क मोड' : 'Dark Mode'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Sun className="w-4 h-4 text-amber-400" />
+                    <span>{language === 'hi' ? 'लाइट मोड' : 'Light Mode'}</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {onOpenThemeModal && (
+              <button
+                id="drawer-btn-theme"
+                onClick={() => {
+                  onOpenThemeModal();
+                  onClose();
+                }}
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-xs font-bold text-white transition-all shadow-sm active:scale-95 ${
+                  !onToggleThemeMode ? 'col-span-2' : ''
+                }`}
+              >
+                <Palette className="w-4 h-4 text-amber-400" />
+                <span>{language === 'hi' ? 'कलर थीम' : 'Themes'}</span>
+              </button>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-2">
             {/* Language switch */}

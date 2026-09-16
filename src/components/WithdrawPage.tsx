@@ -10,10 +10,12 @@ import {
   Send,
   PlusCircle,
   RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
-import { Language, UserWallet, WithdrawRecord, BankAccount } from '../types';
+import { Language, UserWallet, WithdrawRecord, BankAccount, ThemeMode } from '../types';
 import { formatCurrency } from '../utils/gameLogic';
 import { sound } from '../utils/sound';
+import { ASSETS_3D } from '../utils/assets3d';
 
 interface WithdrawPageProps {
   wallet: UserWallet;
@@ -22,6 +24,8 @@ interface WithdrawPageProps {
   onUpdateBankDetails: (details: BankAccount) => void;
   onRequestWithdrawal: (amount: number, method: 'bank' | 'upi', targetAddress: string) => boolean;
   language: Language;
+  themeMode?: ThemeMode;
+  onNavigateTransactions?: () => void;
 }
 
 export const WithdrawPage: React.FC<WithdrawPageProps> = ({
@@ -31,7 +35,10 @@ export const WithdrawPage: React.FC<WithdrawPageProps> = ({
   onUpdateBankDetails,
   onRequestWithdrawal,
   language,
+  themeMode = 'dark',
+  onNavigateTransactions,
 }) => {
+  const isLight = themeMode === 'light';
   const [withdrawAmount, setWithdrawAmount] = useState<string>('1500');
   const [payoutMethod, setPayoutMethod] = useState<'bank' | 'upi'>('bank');
   const [isEditingBank, setIsEditingBank] = useState<boolean>(false);
@@ -135,25 +142,47 @@ export const WithdrawPage: React.FC<WithdrawPageProps> = ({
         </div>
       )}
 
-      {/* Balance Summary Card */}
-      <div className="rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-slate-950 border border-indigo-500/30 p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-1">
-            <ArrowDownCircle className="w-4 h-4" />
-            <span>{language === 'hi' ? 'निकासी योग्य बैलेंस' : 'Withdrawable Demo Balance'}</span>
+      {/* Balance Summary Card with 3D Bank Vault Asset */}
+      <div className={`rounded-3xl border p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
+        isLight
+          ? 'bg-gradient-to-br from-indigo-50 via-white to-indigo-100/50 border-indigo-200 shadow-indigo-900/5'
+          : 'bg-gradient-to-br from-indigo-950/80 via-zinc-900 to-zinc-950 border-indigo-500/30 shadow-indigo-950/20'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl p-1 bg-indigo-500/20 border border-indigo-400/40 shrink-0 shadow-lg flex items-center justify-center">
+            <img
+              src={ASSETS_3D.bankVault3D}
+              alt="3D Bank Vault"
+              className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)]"
+              referrerPolicy="no-referrer"
+            />
           </div>
-          <div className="text-3xl sm:text-4xl font-mono font-black text-white">
-            {formatCurrency(wallet.balance)}
+          <div>
+            <div className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-0.5 ${
+              isLight ? 'text-indigo-700' : 'text-indigo-400'
+            }`}>
+              <ArrowDownCircle className="w-3.5 h-3.5" />
+              <span>{language === 'hi' ? 'निकासी योग्य बैलेंस' : 'Withdrawable Demo Balance'}</span>
+            </div>
+            <div className={`text-2xl sm:text-4xl font-mono font-black tracking-tight ${
+              isLight ? 'text-slate-900' : 'text-white'
+            }`}>
+              {formatCurrency(wallet.balance)}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 bg-slate-950/80 border border-slate-800 rounded-2xl p-3 text-xs">
-          <ShieldCheck className="w-8 h-8 text-emerald-400 flex-shrink-0" />
+        <div className={`flex items-center gap-3 border rounded-2xl p-3 text-xs ${
+          isLight
+            ? 'bg-slate-50 border-slate-200'
+            : 'bg-zinc-950/80 border-white/10'
+        }`}>
+          <ShieldCheck className="w-8 h-8 text-emerald-500 shrink-0" />
           <div>
-            <div className="font-bold text-white">
+            <div className={`font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
               {language === 'hi' ? '24/7 तत्काल निकासी' : '24/7 Instant Settlement'}
             </div>
-            <div className="text-slate-400 text-[11px]">
+            <div className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
               {language === 'hi' ? '0% अतिरिक्त शुल्क • IMPS/UPI ट्रांसफर' : '0% Processing Fee • IMPS / UPI'}
             </div>
           </div>
@@ -375,11 +404,26 @@ export const WithdrawPage: React.FC<WithdrawPageProps> = ({
       </form>
 
       {/* Withdrawal History */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-3">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <Clock className="w-4 h-4 text-indigo-400" />
-          <span>{language === 'hi' ? 'हालिया निकासी रिकॉर्ड' : 'Withdrawal Records'}</span>
-        </h3>
+      <div className={`border rounded-3xl p-5 shadow-lg space-y-3 transition-colors ${
+        isLight ? 'bg-white border-slate-200' : 'bg-zinc-900/90 border-white/10'
+      }`}>
+        <div className="flex items-center justify-between">
+          <h3 className={`text-sm font-bold flex items-center gap-2 ${
+            isLight ? 'text-slate-900' : 'text-white'
+          }`}>
+            <Clock className="w-4 h-4 text-indigo-500" />
+            <span>{language === 'hi' ? 'हालिया निकासी रिकॉर्ड' : 'Withdrawal Records'}</span>
+          </h3>
+          {onNavigateTransactions && (
+            <button
+              onClick={onNavigateTransactions}
+              className="text-xs font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors"
+            >
+              <span>{language === 'hi' ? 'सभी देखें' : 'View All'}</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
 
         <div className="space-y-2">
           {withdrawals.map((w) => (

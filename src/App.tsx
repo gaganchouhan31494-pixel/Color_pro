@@ -14,12 +14,14 @@ import {
   UserBet,
   UserWallet,
   WithdrawRecord,
+  ThemeMode,
 } from './types';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
 import { AuthModal } from './components/AuthModal';
 import { DepositPage } from './components/DepositPage';
 import { WithdrawPage } from './components/WithdrawPage';
+import { TransactionsView } from './components/TransactionsView';
 import { ReferPage } from './components/ReferPage';
 import { ProofPage } from './components/ProofPage';
 import { SupportPage } from './components/SupportPage';
@@ -221,7 +223,7 @@ export default function App() {
   const [currentTheme, setCurrentTheme] = useState<ColorThemeId>(() => {
     try {
       const saved = localStorage.getItem('color_game_theme');
-      if (saved && ['monochrome', 'emerald', 'cyber', 'royalGold', 'rubyMonaco'].includes(saved)) {
+      if (saved && Object.keys(COLOR_THEMES).includes(saved)) {
         return saved as ColorThemeId;
       }
     } catch {
@@ -229,6 +231,49 @@ export default function App() {
     }
     return 'monochrome';
   });
+
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    try {
+      const savedMode = localStorage.getItem('color_game_mode');
+      if (savedMode === 'light' || savedMode === 'dark') return savedMode as ThemeMode;
+    } catch {
+      // ignore
+    }
+    return 'dark';
+  });
+
+  // Toggle between Light and Dark modes
+  const handleToggleThemeMode = useCallback(() => {
+    sound.playClick();
+    setThemeMode((prevMode) => {
+      const nextMode: ThemeMode = prevMode === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('color_game_mode', nextMode);
+      } catch {
+        // ignore
+      }
+      if (nextMode === 'light') {
+        setCurrentTheme('pearlWhite');
+      } else {
+        setCurrentTheme('monochrome');
+      }
+      return nextMode;
+    });
+  }, []);
+
+  const handleSelectTheme = (themeId: ColorThemeId) => {
+    sound.playClick();
+    setCurrentTheme(themeId);
+    const cfg = COLOR_THEMES[themeId];
+    if (cfg) {
+      setThemeMode(cfg.mode);
+      try {
+        localStorage.setItem('color_game_mode', cfg.mode);
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   // Persist active color theme
   useEffect(() => {
@@ -569,6 +614,8 @@ export default function App() {
         user={user}
         language={language}
         soundEnabled={soundEnabled}
+        themeMode={themeMode}
+        onToggleThemeMode={handleToggleThemeMode}
         onToggleSound={() => setSoundEnabled((v) => !v)}
         onToggleLanguage={() => setLanguage((l) => (l === 'en' ? 'hi' : 'en'))}
         onOpenRecharge={() => setActivePage('deposit')}
@@ -590,6 +637,7 @@ export default function App() {
           }}
           language={language}
           isLoggedIn={user.isLoggedIn}
+          themeMode={themeMode}
         />
 
         {/* PAGE 1: Core Color Prediction & Reduction Game */}
@@ -776,6 +824,8 @@ export default function App() {
             language={language}
             deposits={deposits}
             onAddFunds={handleDepositSuccess}
+            themeMode={themeMode}
+            onNavigateTransactions={() => setActivePage('transactions')}
           />
         )}
 
@@ -790,6 +840,22 @@ export default function App() {
             }}
             onRequestWithdrawal={handleWithdrawalRequest}
             language={language}
+            themeMode={themeMode}
+            onNavigateTransactions={() => setActivePage('transactions')}
+          />
+        )}
+
+        {/* PAGE: Transactions Center */}
+        {activePage === 'transactions' && (
+          <TransactionsView
+            wallet={wallet}
+            deposits={deposits}
+            withdrawals={withdrawals}
+            userBets={userBets}
+            language={language}
+            theme={activeTheme}
+            onNavigateDeposit={() => setActivePage('deposit')}
+            onNavigateWithdraw={() => setActivePage('withdraw')}
           />
         )}
 
@@ -906,6 +972,8 @@ export default function App() {
         wallet={wallet}
         language={language}
         soundEnabled={soundEnabled}
+        themeMode={themeMode}
+        onToggleThemeMode={handleToggleThemeMode}
         onToggleSound={() => setSoundEnabled((v) => !v)}
         onToggleLanguage={() => setLanguage((l) => (l === 'en' ? 'hi' : 'en'))}
         onOpenRules={() => setRulesModalOpen(true)}
@@ -918,10 +986,7 @@ export default function App() {
         isOpen={themeModalOpen}
         onClose={() => setThemeModalOpen(false)}
         currentTheme={currentTheme}
-        onSelectTheme={(themeId) => {
-          setCurrentTheme(themeId);
-          sound.playClick();
-        }}
+        onSelectTheme={handleSelectTheme}
         language={language}
       />
     </div>

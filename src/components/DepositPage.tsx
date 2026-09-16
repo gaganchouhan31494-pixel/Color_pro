@@ -12,16 +12,20 @@ import {
   Gift,
   ArrowRight,
   RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
-import { Language, UserWallet, DepositRecord } from '../types';
+import { Language, UserWallet, DepositRecord, ThemeMode } from '../types';
 import { formatCurrency } from '../utils/gameLogic';
 import { sound } from '../utils/sound';
+import { ASSETS_3D } from '../utils/assets3d';
 
 interface DepositPageProps {
   wallet: UserWallet;
   deposits: DepositRecord[];
   onAddFunds: (amount: number, method: 'upi' | 'paytm' | 'phonepe' | 'gpay' | 'bank' | 'usdt') => void;
   language: Language;
+  themeMode?: ThemeMode;
+  onNavigateTransactions?: () => void;
 }
 
 const PRESET_AMOUNTS = [100, 300, 500, 1000, 2000, 5000, 10000, 50000];
@@ -31,7 +35,10 @@ export const DepositPage: React.FC<DepositPageProps> = ({
   deposits,
   onAddFunds,
   language,
+  themeMode = 'dark',
+  onNavigateTransactions,
 }) => {
+  const isLight = themeMode === 'light';
   const [selectedAmount, setSelectedAmount] = useState<number>(1000);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [paymentChannel, setPaymentChannel] = useState<'upi' | 'phonepe' | 'paytm' | 'gpay' | 'bank'>('upi');
@@ -93,31 +100,54 @@ export const DepositPage: React.FC<DepositPageProps> = ({
         </div>
       )}
 
-      {/* Balance & Bonus Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-950 border border-emerald-500/30 p-5 sm:p-6 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-1">
-              <Wallet className="w-4 h-4" />
-              <span>{language === 'hi' ? 'वर्तमान डेमो वॉलेट बैलेंस' : 'Current Demo Wallet Balance'}</span>
+      {/* Balance & Bonus Card with 3D Vault Asset */}
+      <div className={`relative overflow-hidden rounded-3xl border p-5 sm:p-6 shadow-xl transition-colors ${
+        isLight
+          ? 'bg-gradient-to-br from-amber-50 via-white to-amber-100/50 border-amber-200 shadow-amber-900/5'
+          : 'bg-gradient-to-br from-emerald-950/80 via-zinc-900 to-zinc-950 border-emerald-500/30 shadow-emerald-950/20'
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div className="flex items-center gap-3">
+            {/* 3D Gold Vault Asset */}
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl p-1 bg-amber-400/20 border border-amber-400/40 shrink-0 shadow-lg flex items-center justify-center">
+              <img
+                src={ASSETS_3D.goldCoinsVault}
+                alt="3D Gold Vault"
+                className="w-full h-full object-contain filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)]"
+                referrerPolicy="no-referrer"
+              />
             </div>
-            <div className="text-3xl sm:text-4xl font-mono font-black text-white tracking-tight">
-              {formatCurrency(wallet.balance)}
+            <div>
+              <div className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-0.5 ${
+                isLight ? 'text-amber-700' : 'text-emerald-400'
+              }`}>
+                <Wallet className="w-3.5 h-3.5" />
+                <span>{language === 'hi' ? 'डेमो वॉलेट बैलेंस' : 'Demo Wallet Balance'}</span>
+              </div>
+              <div className={`text-2xl sm:text-4xl font-mono font-black tracking-tight ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
+                {formatCurrency(wallet.balance)}
+              </div>
             </div>
           </div>
 
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center flex-shrink-0">
+          <div className={`rounded-2xl p-3 flex items-center gap-3 border ${
+            isLight
+              ? 'bg-amber-100/80 border-amber-300'
+              : 'bg-amber-500/10 border-amber-500/30'
+          }`}>
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
               <Gift className="w-5 h-5" />
             </div>
             <div className="text-left">
-              <div className="text-xs font-bold text-amber-300">
+              <div className={`text-xs font-bold ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
                 {language === 'hi' ? '+10% त्वरित जमा बोनस' : '+10% Instant Deposit Bonus'}
               </div>
-              <div className="text-[11px] text-slate-400">
+              <div className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
                 {language === 'hi'
-                  ? 'प्रत्येक रिचार्ज पर स्वचालित 10% अतिरिक्त फंड पाएं'
-                  : 'Get automated 10% extra funds on every recharge'}
+                  ? 'प्रत्येक रिचार्ज पर 10% अतिरिक्त फंड पाएं'
+                  : 'Get automated 10% extra funds on recharge'}
               </div>
             </div>
           </div>
@@ -337,11 +367,26 @@ export const DepositPage: React.FC<DepositPageProps> = ({
       )}
 
       {/* Recent Deposit Records */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-3">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <Clock className="w-4 h-4 text-emerald-400" />
-          <span>{language === 'hi' ? 'हालिया जमा रिकॉर्ड (Deposit Records)' : 'Recent Deposit Records'}</span>
-        </h3>
+      <div className={`border rounded-3xl p-5 shadow-lg space-y-3 transition-colors ${
+        isLight ? 'bg-white border-slate-200' : 'bg-zinc-900/90 border-white/10'
+      }`}>
+        <div className="flex items-center justify-between">
+          <h3 className={`text-sm font-bold flex items-center gap-2 ${
+            isLight ? 'text-slate-900' : 'text-white'
+          }`}>
+            <Clock className="w-4 h-4 text-emerald-500" />
+            <span>{language === 'hi' ? 'हालिया जमा रिकॉर्ड (Deposit Records)' : 'Recent Deposit Records'}</span>
+          </h3>
+          {onNavigateTransactions && (
+            <button
+              onClick={onNavigateTransactions}
+              className="text-xs font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors"
+            >
+              <span>{language === 'hi' ? 'सभी देखें' : 'View All'}</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
 
         <div className="space-y-2">
           {deposits.map((dep) => (

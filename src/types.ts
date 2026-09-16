@@ -9,6 +9,7 @@ export type AppPage =
   | 'game'
   | 'deposit'
   | 'withdraw'
+  | 'transactions'
   | 'refer'
   | 'proof'
   | 'support'
@@ -132,7 +133,9 @@ export interface ReferralData {
 
 export type Language = 'en' | 'hi';
 
-export type ColorThemeId = 'monochrome' | 'emerald' | 'cyber' | 'royalGold' | 'rubyMonaco';
+export type ThemeMode = 'dark' | 'light';
+
+export type ColorThemeId = 'monochrome' | 'emerald' | 'cyber' | 'royalGold' | 'rubyMonaco' | 'platinumLight' | 'pearlGoldLight';
 
 export interface ThemeConfig {
   id: ColorThemeId;
@@ -141,10 +144,17 @@ export interface ThemeConfig {
   description: string;
   descriptionHi: string;
   previewColors: string[];
+  mode: ThemeMode;
   bgClass: string;
+  headerBg: string;
   headerBorder: string;
   ambientGlow1: string;
   ambientGlow2: string;
   activeTabClass: string;
+  cardBg: string;
+  cardBorder: string;
+  textPrimary: string;
+  textSecondary: string;
 }
+
 
