@@ -1,160 +1,189 @@
-export type GameMode = '30s' | '1m' | '3m';
+export type Leg = 'LEFT' | 'RIGHT';
 
-export type BetTargetType = 'color' | 'number' | 'size';
+export type MemberRank =
+  | 'DISTRIBUTOR'
+  | 'STAR'
+  | 'SILVER'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'DIAMOND'
+  | 'CROWN_AMBASSADOR';
 
-export type ColorType = 'green' | 'red' | 'violet';
-export type SizeType = 'big' | 'small';
-
-export type AppPage =
-  | 'game'
-  | 'deposit'
-  | 'withdraw'
-  | 'transactions'
-  | 'refer'
-  | 'proof'
-  | 'support'
-  | 'about'
-  | 'profile'
-  | 'auth';
-
-export interface RoundResult {
-  id: string; // e.g. "20260915001"
-  period: string;
-  gameMode: GameMode;
-  number: number; // 0 - 9
-  colors: ColorType[]; // [red, violet] for 0, [green, violet] for 5, etc.
-  size: SizeType; // big (5-9), small (0-4)
-  timestamp: number;
-  hash?: string;
-}
-
-export interface UserBet {
+export interface Member {
   id: string;
-  period: string;
-  gameMode: GameMode;
-  targetType: BetTargetType;
-  selectedColor?: ColorType;
-  selectedNumber?: number;
-  selectedSize?: SizeType;
-  amount: number;
-  multiplier: number;
-  totalBet: number;
-  status: 'pending' | 'won' | 'lost';
-  winAmount?: number;
-  roundResult?: RoundResult;
-  createdAt: number;
-}
-
-export interface UserWallet {
-  balance: number;
-  totalWon: number;
-  totalLost: number;
-  totalBetsPlaced: number;
-  totalDeposited: number;
-  totalWithdrawn: number;
-}
-
-export interface BankAccount {
-  accountHolderName: string;
-  bankName: string;
-  accountNumber: string;
-  ifscCode: string;
-  upiId: string;
-}
-
-export interface UserAccount {
-  id: string;
+  name: string;
   phone: string;
-  username: string;
-  avatar: string;
-  vipLevel: number;
-  inviteCode: string;
-  invitedBy?: string;
-  isLoggedIn: boolean;
-  createdAt: number;
-  bankDetails?: BankAccount;
+  email: string;
+  sponsorId: string | null;
+  placementId: string | null;
+  leg: Leg;
+  packageId: string;
+  packageName: string;
+  packageAmount: number;
+  pv: number; // Point Value / Business Volume
+  isActive: boolean;
+  joinDate: string;
+  leftChildId?: string | null;
+  rightChildId?: string | null;
+  leftBV: number; // current balance Left BV
+  rightBV: number; // current balance Right BV
+  leftTotalBV: number; // lifetime accumulated
+  rightTotalBV: number; // lifetime accumulated
+  leftTeamCount: number;
+  rightTeamCount: number;
+  directReferralsCount: number;
+  rank: MemberRank;
+  avatarSeed: string;
 }
 
-export interface DepositRecord {
+export interface Package {
   id: string;
-  amount: number;
-  method: 'upi' | 'paytm' | 'phonepe' | 'gpay' | 'bank' | 'usdt' | string;
-  status: 'completed' | 'processing' | 'failed';
-  utr: string;
-  bonus: number;
-  timestamp: number;
-}
-
-export interface WithdrawRecord {
-  id: string;
-  amount: number;
-  payoutMethod: 'bank' | 'upi' | string;
-  targetAddress: string;
-  status: 'completed' | 'processing' | 'pending';
-  utr: string;
-  fee: number;
-  timestamp: number;
-}
-
-export interface ProofItem {
-  id: string;
-  userMasked: string;
-  avatar: string;
-  amount: number;
-  method: string;
-  utr: string;
-  timeAgo: string;
-  bankName: string;
-  city: string;
-}
-
-export interface ReferralFriend {
-  id: string;
-  phone: string;
-  level: 1 | 2 | 3;
-  date: string;
-  totalBet: number;
-  commission: number;
-}
-
-export interface ReferralData {
-  inviteCode: string;
-  referralLink: string;
-  totalInvited: number;
-  level1Count: number;
-  level2Count: number;
-  level3Count: number;
-  todayCommission: number;
-  totalCommission: number;
-  claimedCommission: number;
-  unclaimedCommission: number;
-  friends: ReferralFriend[];
-}
-
-export type Language = 'en' | 'hi';
-
-export type ThemeMode = 'dark' | 'light';
-
-export type ColorThemeId = 'monochrome' | 'emerald' | 'cyber' | 'royalGold' | 'rubyMonaco' | 'platinumLight' | 'pearlGoldLight';
-
-export interface ThemeConfig {
-  id: ColorThemeId;
   name: string;
   nameHi: string;
-  description: string;
-  descriptionHi: string;
-  previewColors: string[];
-  mode: ThemeMode;
-  bgClass: string;
-  headerBg: string;
-  headerBorder: string;
-  ambientGlow1: string;
-  ambientGlow2: string;
-  activeTabClass: string;
-  cardBg: string;
-  cardBorder: string;
-  textPrimary: string;
-  textSecondary: string;
+  price: number;
+  pv: number;
+  dailyCapping: number; // Max binary payout per day
+  directBonusPercent: number; // e.g. 10%
+  pairMatchingPercent: number; // e.g. 10%
+  roiDailyPercent: number; // e.g. 0.5% daily
+  roiDays: number; // e.g. 200 days
+  color: string;
+  borderColor: string;
+  badgeBg: string;
+  features: string[];
+  featuresHi: string[];
+  isPopular?: boolean;
 }
 
+export type IncomeCategory =
+  | 'DIRECT'
+  | 'PAIR_MATCHING'
+  | 'LEVEL_ROI'
+  | 'SPILLOVER'
+  | 'ROYALTY'
+  | 'REWARD'
+  | 'DAILY_ROI';
+
+export interface IncomeStreamInfo {
+  id: IncomeCategory;
+  name: string;
+  nameHi: string;
+  tagline: string;
+  taglineHi: string;
+  percentageOrAmount: string;
+  iconName: string;
+  color: string;
+  bgGradient: string;
+  description: string;
+  descriptionHi: string;
+  formula: string;
+  keyRule: string;
+  keyRuleHi: string;
+}
+
+export interface TransactionRecord {
+  id: string;
+  date: string;
+  type: IncomeCategory | 'WITHDRAWAL' | 'PACKAGE_PURCHASE' | 'MOBILE_RECHARGE';
+  title: string;
+  titleHi: string;
+  amount: number;
+  isCredit: boolean;
+  notes: string;
+  memberReference?: string;
+  status: 'COMPLETED' | 'PENDING' | 'REJECTED';
+}
+
+export interface RankReward {
+  id: string;
+  rank: MemberRank;
+  rankName: string;
+  rankNameHi: string;
+  pairsRequired: number;
+  rewardTitle: string;
+  rewardTitleHi: string;
+  rewardValue: number;
+  royaltyPoolPercent: number;
+  icon: string;
+  badgeColor: string;
+}
+
+export interface PlanSettings {
+  companyName: string;
+  currency: string;
+  currencySymbol: string;
+  matchingRatio: '1:1' | '2:1_OR_1:2';
+  defaultPairPercentage: number;
+  defaultDirectPercentage: number;
+  tdsPercent: number;
+  adminPercent: number;
+  minWithdrawal: number;
+  spilloverEnabled: boolean;
+  powerLegCarryForward: boolean;
+  dailyCappingEnforced: boolean;
+}
+
+export interface SimulationResult {
+  leftBV: number;
+  rightBV: number;
+  packagePrice: number;
+  directCountLeft: number;
+  directCountRight: number;
+  matchedBV: number;
+  carryForwardLeg: 'LEFT' | 'RIGHT' | 'NONE';
+  carryForwardBV: number;
+  directIncome: number;
+  pairMatchingIncome: number;
+  cappingLimit: number;
+  flushedIncome: number;
+  payablePairIncome: number;
+  levelIncomeEst: number;
+  royaltyPoolEst: number;
+  grossTotal: number;
+  tdsAmount: number;
+  adminAmount: number;
+  netPayable: number;
+}
+
+export type ThemeColor = 'emerald' | 'sapphire' | 'purple' | 'amber' | 'crimson';
+
+export interface LegalDocument {
+  id: string;
+  title: string;
+  titleHi: string;
+  category: 'REGISTRATION' | 'COMPLIANCE' | 'TAX' | 'ISO';
+  regNumber: string;
+  authority: string;
+  issuedDate: string;
+  status: 'ACTIVE' | 'VERIFIED';
+  description: string;
+  descriptionHi: string;
+  stampType: 'MCA' | 'ISO' | 'GOVT' | 'TAX' | 'SECURITY';
+  docDate: string;
+}
+
+export interface MemberVerificationResult {
+  isFound: boolean;
+  isDuplicate: boolean;
+  member?: Member;
+  panNumber?: string;
+  verificationId?: string;
+  verifiedAt?: string;
+  kycStatus: 'VERIFIED' | 'PENDING' | 'DUPLICATE_FLAGGED';
+  riskScore: 'LOW' | 'MEDIUM' | 'HIGH';
+  state: string;
+  remarks: string;
+  remarksHi: string;
+  originalMemberId?: string;
+}
+
+export type ActiveTab =
+  | 'DASHBOARD'
+  | 'TREE'
+  | 'PROOF'
+  | 'TEAM'
+  | 'INCOMES'
+  | 'CALCULATOR'
+  | 'PACKAGES'
+  | 'WALLET';
 
